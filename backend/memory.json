@@ -1,0 +1,23 @@
+{
+  "user": {
+    "name": "Faisal",
+    "title": "Master & Creator",
+    "preferences": {
+      "language": "Hinglish / Hindi / English",
+      "voice": "Swara (Melodious)",
+      "interests": ["Full-Stack Development", "React", "AI Assistants", "Modern Tech"]
+    },
+    "facts": [
+      "Faisal is the creator and visionary of Senorita-AI.",
+      "Prefers a melodious, warm, affectionate, and emotionally supportive companion.",
+      "Uses a Windows laptop for programming and projects."
+    ],
+    "projects": [
+      {
+        "name": "senorita-AI",
+        "description": "Personal AI desktop companion and coding assistant with voice, vision, and automation."
+      }
+    ],
+    "notes": []
+  }
+}
