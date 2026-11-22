@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Bot, User, Copy, Check, Volume2, Sparkles, Terminal, Play, Loader2, X } from 'lucide-react';
+import { Bot, User, Copy, Check, Volume2, Sparkles, Terminal, Play, Loader2, X, ExternalLink } from 'lucide-react';
 import MediaPlayerCard from './MediaPlayerCard';
 
 const EMOTION_MAP = {
@@ -297,6 +297,38 @@ export default function ChatMessage({ message, onSpeak, theme = 'dark', currentU
           >
             {message.content}
           </ReactMarkdown>
+
+          {/* Action Launch Card (WhatsApp, Chrome, YouTube, Website, Apps) */}
+          {message.actionData && message.actionData.url && (
+            <div className={`mt-3 p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 shadow-lg ${
+              isDark
+                ? 'bg-gradient-to-r from-emerald-950/40 via-purple-950/30 to-slate-900/60 border-emerald-500/30'
+                : 'bg-emerald-50/90 border-emerald-300 text-slate-800'
+            }`}>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 flex-shrink-0">
+                  <ExternalLink className="w-4 h-4" />
+                </div>
+                <div className="truncate">
+                  <p className={`text-xs font-bold truncate ${isDark ? 'text-emerald-300' : 'text-emerald-900'}`}>
+                    {message.actionData.appName || 'Open Application'}
+                  </p>
+                  <p className="text-[10px] text-slate-400 truncate font-mono">
+                    {message.actionData.url}
+                  </p>
+                </div>
+              </div>
+              <a
+                href={message.actionData.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 flex-shrink-0"
+              >
+                <span>Launch Now</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
 
           {/* Embedded In-App Media Player (Plays songs & videos directly inside AI) */}
           {message.media && message.media.type === 'youtube' && (

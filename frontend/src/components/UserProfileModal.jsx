@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Sparkles, Check, X, Shield, Heart } from 'lucide-react';
 
 export const AVATAR_STYLES = [
-  { id: 'purple', name: 'Cosmic Purple', gradient: 'from-purple-600 via-pink-600 to-indigo-600', ring: 'ring-purple-400', icon: '✨' },
+  { id: 'purple', name: 'Cosmic Boss', gradient: 'from-purple-600 via-pink-600 to-indigo-600', ring: 'ring-purple-400', icon: '👑' },
   { id: 'pink', name: 'Sweet Blossom', gradient: 'from-pink-500 via-rose-500 to-fuchsia-600', ring: 'ring-pink-400', icon: '💖' },
   { id: 'cyan', name: 'Cyber Ocean', gradient: 'from-blue-600 via-cyan-500 to-teal-400', ring: 'ring-cyan-400', icon: '⚡' },
   { id: 'emerald', name: 'Zen Emerald', gradient: 'from-emerald-600 via-teal-500 to-green-400', ring: 'ring-emerald-400', icon: '🌿' },
@@ -17,7 +17,7 @@ export default function UserProfileModal({
   theme = 'dark',
   isFirstTime = false
 }) {
-  const [name, setName] = useState(currentUser?.name || '');
+  const [name, setName] = useState(currentUser?.name || 'Boss');
   const [selectedAvatar, setSelectedAvatar] = useState(currentUser?.avatarId || 'purple');
   const [error, setError] = useState('');
 
@@ -111,7 +111,7 @@ export default function UserProfileModal({
                   setName(e.target.value);
                   if (error) setError('');
                 }}
-                placeholder="e.g. Faisal, Aman, Priya..."
+                placeholder="e.g. Boss, Faisal, Aman, Priya..."
                 autoFocus
                 maxLength={30}
                 className="w-full bg-transparent py-3 pr-4 text-sm font-medium focus:outline-none placeholder-slate-400"
@@ -160,8 +160,8 @@ export default function UserProfileModal({
               <Sparkles className="w-3.5 h-3.5" />
               <span>Senorita Live Greeting:</span>
             </div>
-            <p className="italic">
-              "Hola {name.trim() || 'Faisal'}! Main Senorita hoon. Main aapke har jazbaat samajhti hoon aur aapke har project me madad karne ke liye taiyar hoon!"
+            <p className="italic font-medium">
+              "Yes {name.trim() ? (name.trim().toLowerCase() === 'boss' ? 'Boss' : `Boss ${name.trim()}`) : 'Boss'}! Senorita here, ready for your command. Bataiye aaj kya execute karna hai? ⚡"
             </p>
           </div>
 

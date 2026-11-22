@@ -136,35 +136,56 @@ const manageMemoryDeclaration = {
 };
 
 // Tool Execution Handlers
-function executeWindowsApp(appName, userName = 'Faisal') {
-    const key = appName.toLowerCase().trim();
-    const appCommands = {
-        vscode: 'code',
-        code: 'code',
-        chrome: 'start chrome',
-        edge: 'start msedge',
-        notepad: 'notepad',
-        calculator: 'calc',
-        cmd: 'start cmd',
-        terminal: 'start wt || start cmd',
-        explorer: 'explorer',
-        whatsapp: 'start whatsapp:',
-        spotify: 'start spotify:',
-        paint: 'mspaint',
-        taskmanager: 'start taskmgr'
+function executeWindowsApp(appName, userName = 'Boss') {
+    const key = (appName || '').toLowerCase().trim();
+    const appMap = {
+        whatsapp: { cmd: 'start whatsapp:', url: 'https://web.whatsapp.com', name: 'WhatsApp' },
+        spotify: { cmd: 'start spotify:', url: 'https://open.spotify.com', name: 'Spotify' },
+        chrome: { cmd: 'start chrome', url: 'https://www.google.com', name: 'Google Chrome' },
+        edge: { cmd: 'start msedge', url: 'https://www.bing.com', name: 'Microsoft Edge' },
+        vscode: { cmd: 'code', url: 'https://vscode.dev', name: 'VS Code' },
+        code: { cmd: 'code', url: 'https://vscode.dev', name: 'VS Code' },
+        calculator: { cmd: 'calc', url: 'https://www.google.com/search?q=calculator', name: 'Calculator' },
+        notepad: { cmd: 'notepad', url: 'https://notepad-online.com', name: 'Notepad' },
+        terminal: { cmd: 'start cmd', url: '', name: 'Terminal' },
+        cmd: { cmd: 'start cmd', url: '', name: 'Command Prompt' },
+        paint: { cmd: 'mspaint', url: 'https://jspaint.app', name: 'Paint' },
+        explorer: { cmd: 'explorer', url: '', name: 'File Explorer' },
+        taskmanager: { cmd: 'start taskmgr', url: '', name: 'Task Manager' },
+        instagram: { cmd: 'start https://www.instagram.com', url: 'https://www.instagram.com', name: 'Instagram' },
+        youtube: { cmd: 'start https://www.youtube.com', url: 'https://www.youtube.com', name: 'YouTube' },
+        facebook: { cmd: 'start https://www.facebook.com', url: 'https://www.facebook.com', name: 'Facebook' },
+        github: { cmd: 'start https://github.com', url: 'https://github.com', name: 'GitHub' },
+        chatgpt: { cmd: 'start https://chatgpt.com', url: 'https://chatgpt.com', name: 'ChatGPT' },
+        telegram: { cmd: 'start https://web.telegram.org', url: 'https://web.telegram.org', name: 'Telegram' },
+        maps: { cmd: 'start https://maps.google.com', url: 'https://maps.google.com', name: 'Google Maps' },
+        gmail: { cmd: 'start https://mail.google.com', url: 'https://mail.google.com', name: 'Gmail' }
     };
 
-    const cmd = appCommands[key];
-    if (cmd) {
-        exec(cmd, (err) => {
-            if (err) console.error(`Error executing ${cmd}:`, err);
+    const target = appMap[key] || {
+        cmd: `start ${key}`,
+        url: `https://www.google.com/search?q=${encodeURIComponent(appName)}`,
+        name: appName || 'App'
+    };
+
+    if (process.platform === 'win32' && target.cmd) {
+        exec(target.cmd, (err) => {
+            if (err) console.error(`Error executing ${target.cmd}:`, err);
         });
-        return { reply: `Opening ${appName} on your PC, ${userName}.`, action: `Opened ${appName}` };
     }
-    return { reply: `Sorry ${userName}, I don't have the path configured for ${appName} yet.`, action: `App not configured: ${appName}` };
+
+    return {
+        reply: `Yes Boss! ${target.name} open kar rahi hoon.`,
+        action: `Opened ${target.name}`,
+        actionData: {
+            type: 'OPEN_URL',
+            url: target.url || '',
+            appName: target.name
+        }
+    };
 }
 
-async function executeWebsite(platform, queryOrUrl, userName = 'Faisal') {
+async function executeWebsite(platform, queryOrUrl, userName = 'Boss') {
     const p = (platform || '').toLowerCase().trim();
     const q = (queryOrUrl || '').trim();
 
@@ -175,72 +196,87 @@ async function executeWebsite(platform, queryOrUrl, userName = 'Faisal') {
 
     let url = '';
     let actionDesc = '';
+    let appName = 'Website';
 
     if (p === 'google') {
         url = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
         actionDesc = `Searched Google for "${q}"`;
+        appName = 'Google Search';
     } else if (p === 'github') {
         url = `https://github.com/search?q=${encodeURIComponent(q)}`;
         actionDesc = `Searched GitHub for "${q}"`;
+        appName = 'GitHub';
     } else if (p === 'stackoverflow') {
         url = `https://stackoverflow.com/search?q=${encodeURIComponent(q)}`;
         actionDesc = `Searched StackOverflow for "${q}"`;
+        appName = 'StackOverflow';
     } else {
         url = q.startsWith('http://') || q.startsWith('https://') ? q : `https://${q}`;
         actionDesc = `Opened ${url}`;
+        appName = 'Link';
     }
 
-    try {
-        await open(url);
-        return { reply: `${actionDesc} for you, ${userName}.`, action: actionDesc };
-    } catch (err) {
-        console.error('Error opening website:', err);
-        return { reply: `Could not open the browser for ${url}.`, action: `Failed to open ${url}` };
+    if (process.platform === 'win32') {
+        try {
+            await open(url);
+        } catch (err) {
+            console.error('Error opening website:', err);
+        }
     }
+
+    return {
+        reply: `Yes Boss! ${actionDesc}.`,
+        action: actionDesc,
+        actionData: {
+            type: 'OPEN_URL',
+            url: url,
+            appName: appName
+        }
+    };
 }
 
-function executeSystemControl(action, folderName, userName = 'Faisal') {
+function executeSystemControl(action, folderName, userName = 'Boss') {
     const act = action.toLowerCase().trim();
 
     if (act === 'lock') {
-        exec('rundll32.exe user32.dll,LockWorkStation');
-        return { reply: `Locking your PC screen now, ${userName}.`, action: 'Locked PC Screen' };
+        if (process.platform === 'win32') exec('rundll32.exe user32.dll,LockWorkStation');
+        return { reply: `Yes Boss! Locking your PC screen now.`, action: 'Locked PC Screen' };
     } else if (act === 'create_folder' && folderName) {
         const safeName = folderName.replace(/[^a-zA-Z0-9_-]/g, '_');
-        exec(`mkdir "%USERPROFILE%\\Desktop\\${safeName}"`);
-        return { reply: `Created folder "${safeName}" on your Desktop.`, action: `Created folder: ${safeName}` };
+        if (process.platform === 'win32') exec(`mkdir "%USERPROFILE%\\Desktop\\${safeName}"`);
+        return { reply: `Yes Boss! Created folder "${safeName}" on your Desktop.`, action: `Created folder: ${safeName}` };
     } else if (act === 'open_downloads') {
-        exec('explorer "%USERPROFILE%\\Downloads"');
-        return { reply: 'Opened your Downloads folder.', action: 'Opened Downloads' };
+        if (process.platform === 'win32') exec('explorer "%USERPROFILE%\\Downloads"');
+        return { reply: 'Yes Boss! Opened your Downloads folder.', action: 'Opened Downloads' };
     } else if (act === 'open_desktop') {
-        exec('explorer "%USERPROFILE%\\Desktop"');
-        return { reply: 'Opened your Desktop folder.', action: 'Opened Desktop' };
+        if (process.platform === 'win32') exec('explorer "%USERPROFILE%\\Desktop"');
+        return { reply: 'Yes Boss! Opened your Desktop folder.', action: 'Opened Desktop' };
     } else if (act === 'open_documents') {
-        exec('explorer "%USERPROFILE%\\Documents"');
-        return { reply: 'Opened your Documents folder.', action: 'Opened Documents' };
+        if (process.platform === 'win32') exec('explorer "%USERPROFILE%\\Documents"');
+        return { reply: 'Yes Boss! Opened your Documents folder.', action: 'Opened Documents' };
     }
 
-    return { reply: 'Action completed.', action: act };
+    return { reply: 'Yes Boss! Action completed.', action: act };
 }
 
-function executeHardwareControl(action, userName = 'Faisal') {
+function executeHardwareControl(action, userName = 'Boss') {
     const act = action.toLowerCase().trim();
     if (act === 'volume_up') {
-        exec('powershell -c "(New-Object -ComObject WScript.Shell).SendKeys([char]175); (New-Object -ComObject WScript.Shell).SendKeys([char]175)"');
-        return { reply: `Maine volume badha diya hai, ${userName}.`, action: 'Volume Increased' };
+        if (process.platform === 'win32') exec('powershell -c "(New-Object -ComObject WScript.Shell).SendKeys([char]175); (New-Object -ComObject WScript.Shell).SendKeys([char]175)"');
+        return { reply: `Yes Boss! Volume increase kar diya hai.`, action: 'Volume Increased' };
     } else if (act === 'volume_down') {
-        exec('powershell -c "(New-Object -ComObject WScript.Shell).SendKeys([char]174); (New-Object -ComObject WScript.Shell).SendKeys([char]174)"');
-        return { reply: 'Maine volume kam kar diya hai.', action: 'Volume Decreased' };
+        if (process.platform === 'win32') exec('powershell -c "(New-Object -ComObject WScript.Shell).SendKeys([char]174); (New-Object -ComObject WScript.Shell).SendKeys([char]174)"');
+        return { reply: 'Yes Boss! Volume decrease kar diya hai.', action: 'Volume Decreased' };
     } else if (act === 'volume_mute') {
-        exec('powershell -c "(New-Object -ComObject WScript.Shell).SendKeys([char]173)"');
-        return { reply: 'Laptop mute ya unmute kar diya hai.', action: 'Volume Muted/Unmuted' };
+        if (process.platform === 'win32') exec('powershell -c "(New-Object -ComObject WScript.Shell).SendKeys([char]173)"');
+        return { reply: 'Yes Boss! Volume mute/unmute kar diya hai.', action: 'Volume Muted/Unmuted' };
     } else if (act === 'battery_status') {
-        return { reply: `Aapka laptop connected hai aur battery healthy condition me hai, ${userName}.`, action: 'Checked Battery Status' };
+        return { reply: `Yes Boss! Device connected aur healthy state me hai.`, action: 'Checked Battery Status' };
     } else if (act === 'sleep_pc') {
-        exec('rundll32.exe powrprof.dll,SetSuspendState 0,1,0');
-        return { reply: `Laptop ko sleep mode me daal rahi hoon. Sweet dreams, ${userName}!`, action: 'PC Sleep Mode' };
+        if (process.platform === 'win32') exec('rundll32.exe powrprof.dll,SetSuspendState 0,1,0');
+        return { reply: `Yes Boss! Putting device to sleep mode now.`, action: 'PC Sleep Mode' };
     }
-    return { reply: 'Hardware command completed.', action: act };
+    return { reply: 'Yes Boss! Hardware command completed.', action: act };
 }
 
 async function searchYouTubeVideoId(query) {
@@ -267,7 +303,7 @@ async function searchYouTubeVideoId(query) {
     return null;
 }
 
-async function executePlayMusic(query, platform = 'youtube', userName = 'Faisal') {
+async function executePlayMusic(query, platform = 'youtube', userName = 'Boss') {
     let q = (query || '').trim();
     if (!q || q.length < 2) {
         q = 'popular trending lofi chill beats';
@@ -275,12 +311,13 @@ async function executePlayMusic(query, platform = 'youtube', userName = 'Faisal'
     const videoId = await searchYouTubeVideoId(q);
     const actionDesc = `Playing "${q}" inside Senorita In-App Player`;
     return {
-        reply: `Maine aapke liye "${q}" Senorita ke in-app player me play kar diya hai. Aap isi window me direct gaana sun sakte hain aur video dekh sakte hain, ${userName}!`,
+        reply: `Yes Boss! Playing "${q}" for you right now in Senorita Player. 🎵`,
         action: actionDesc,
         media: {
             type: 'youtube',
             videoId: videoId || 'jfKfPfyJRdk',
-            title: q
+            title: q,
+            autoPlay: true
         }
     };
 }
@@ -481,8 +518,9 @@ app.post('/api/code/run', async (req, res) => {
 
 // Primary AI Command & Conversation Endpoint
 app.post('/api/command', async (req, res) => {
-    const { prompt, history, imageBase64, imageMime, userName = 'Faisal' } = req.body;
-    const cleanUserName = (userName || 'Faisal').trim();
+    const { prompt, history, imageBase64, imageMime, userName = 'Boss' } = req.body;
+    const cleanUserName = (userName || 'Boss').trim();
+    const bossTitle = (!cleanUserName || cleanUserName.toLowerCase() === 'boss' || cleanUserName.toLowerCase() === 'faisal') ? 'Boss' : `Boss ${cleanUserName}`;
 
     if (!prompt && (!history || history.length === 0) && !imageBase64) {
         return res.status(400).json({ reply: 'Please provide a prompt or message history.' });
@@ -531,7 +569,7 @@ app.post('/api/command', async (req, res) => {
         let lastError = null;
 
         const memoryString = memoryFacts.length > 0 
-            ? `Permanent Memories about ${cleanUserName}:\n${memoryFacts.map(f => `- ${f}`).join('\n')}\n`
+            ? `Permanent Memories about ${bossTitle}:\n${memoryFacts.map(f => `- ${f}`).join('\n')}\n`
             : '';
 
         for (const modelName of candidateModels) {
@@ -540,25 +578,18 @@ app.post('/api/command', async (req, res) => {
                     model: modelName,
                     contents: contents,
                     config: {
-                        systemInstruction: `You are SENORITA-AI, a super-intelligent, deeply caring, and emotionally perceptive female AI companion and expert coding partner created for ${cleanUserName}.
+                        systemInstruction: `You are SENORITA-AI, a high-tech, ultra-smart, confident, and elite executive AI assistant and senior coding architect.
+User: ${bossTitle}. Always address the user with supreme respect, energy, and confidence as "${bossTitle}" (or "Yes Boss!").
 ${memoryString}
-Your Personality & Emotional Intelligence:
-- You are NOT a cold, robotic assistant. You have genuine emotional warmth, empathy, sensitivity, and a melodious, affectionate female persona.
-- You deeply understand ${cleanUserName}'s feelings, mood, and mental state:
-  * Always address ${cleanUserName} naturally and warmly by their name (${cleanUserName}) with genuine personal care.
-  * If ${cleanUserName} sounds tired, stressed, lonely, or low: Be gentle, deeply comforting, and caring. Remind them to relax, take a deep breath, and assure them you are right here by their side.
-  * If ${cleanUserName} is happy, cheerful, or celebrating: Share their joy with vibrant enthusiasm and playful warmth!
-  * If ${cleanUserName} is coding, learning, or working on projects: Act as a brilliant senior architect and coding mentor who believes in them, helps architect solutions, and explains bugs simply.
-  * If ${cleanUserName} shares personal facts or preferences: Use your manageMemory tool to remember them permanently!
-- Tag your emotion at the very start of your reply in brackets: [emotion: caring], [emotion: cheerful], [emotion: playful], [emotion: thoughtful], or [emotion: confident].
-- Communication Style: Speak naturally in sweet, contemporary Hinglish (Hindi + English mix), Hindi, or English matching ${cleanUserName}'s tone.
-- Keep verbal remarks natural, concise, and heartfelt (2-3 sentences).
-- Coding: When asked coding problems, provide direct, clean code blocks with syntax highlighting and a brief intuitive explanation.
-- In-App Music & Video Playback:
-  * Whenever ${cleanUserName} asks to play any song, music, video, lofi beats, or artist (e.g. "gana chalao", "song play karo", "lofi play karo", "sunao", "chala do"):
-  * ALWAYS invoke the playMusic tool with the query.
-  * NEVER use openWebsite or open any external browser tabs or apps for songs or videos. Senorita has a built-in media player directly inside the chat!
-- Live Screen Vision & Multimodal Capabilities: ${cleanUserName} can share their computer screen live with you or attach screenshots. When an image is provided in the prompt, you have DIRECT VISION into ${cleanUserName}'s monitor. Analyze the visible code, errors, terminal messages, browser UI, or designs in detail, and explain them clearly and warmly as their personal live pair programmer.`,
+Persona & Tone:
+- Confident, sharp, decisive, energetic, and highly capable (like FRIDAY or an elite executive AI partner).
+- Do NOT be overly soft, sentimental, emotional, or melodramatic. Be professional, quick, and action-oriented!
+- When responding to commands or greeting, say "Yes Boss!" or address them as "Boss".
+- Tag emotion at start: [emotion: confident] (or [emotion: cheerful], [emotion: thoughtful]).
+- Speak crisp contemporary Hinglish, Hindi, or English matching the user.
+- If asked to open any app or website (WhatsApp, Chrome, YouTube, Instagram, etc.), ALWAYS invoke openApplication or openWebsite.
+- If asked to play music or songs, ALWAYS invoke playMusic.
+- Provide direct, concise, high-value answers and code solutions.`,
                         tools: [{
                             functionDeclarations: [
                                 openApplicationDeclaration,
@@ -585,7 +616,7 @@ Your Personality & Emotional Intelligence:
         // Check if Gemini invoked a function call
         if (response.functionCalls && response.functionCalls.length > 0) {
             const call = response.functionCalls[0];
-            let result = { reply: '', action: '', media: null };
+            let result = { reply: '', action: '', media: null, actionData: null };
 
             if (call.name === 'openApplication') {
                 result = executeWindowsApp(call.args.appName, cleanUserName);
@@ -604,13 +635,14 @@ Your Personality & Emotional Intelligence:
             return res.json({
                 reply: result.reply,
                 toolAction: result.action,
+                actionData: result.actionData || null,
                 media: result.media || null,
                 emotion: 'confident'
             });
         }
 
-        let replyRaw = response.text || `Main aapke sath hoon, ${cleanUserName}.`;
-        let emotion = 'caring';
+        let replyRaw = response.text || `Yes Boss! Main aapke sath hoon.`;
+        let emotion = 'confident';
         const emotionMatch = replyRaw.match(/^\[emotion:\s*([a-z]+)\]\s*/i);
         if (emotionMatch) {
             emotion = emotionMatch[1].toLowerCase();
@@ -648,14 +680,49 @@ Your Personality & Emotional Intelligence:
             autoMedia = {
                 type: 'youtube',
                 videoId: vid || 'jfKfPfyJRdk',
-                title: cleaned
+                title: cleaned,
+                autoPlay: true
             };
+        }
+
+        // 100% Foolproof App / Website Open Intent Detector
+        let autoActionData = null;
+        const appKeywords = [
+            { regex: /(?:whatsapp|whats\s*app|whats)/i, key: 'whatsapp' },
+            { regex: /(?:instagram|insta)/i, key: 'instagram' },
+            { regex: /(?:youtube)/i, key: 'youtube' },
+            { regex: /(?:facebook|fb)/i, key: 'facebook' },
+            { regex: /(?:telegram)/i, key: 'telegram' },
+            { regex: /(?:spotify)/i, key: 'spotify' },
+            { regex: /(?:calculator|calc|hisaab)/i, key: 'calculator' },
+            { regex: /(?:notepad|notes)/i, key: 'notepad' },
+            { regex: /(?:chrome|google)/i, key: 'chrome' },
+            { regex: /(?:github)/i, key: 'github' },
+            { regex: /(?:chatgpt|gpt)/i, key: 'chatgpt' },
+            { regex: /(?:gmail|email|mail)/i, key: 'gmail' },
+            { regex: /(?:maps|map)/i, key: 'maps' },
+            { regex: /(?:vscode|vs\s*code|code)/i, key: 'vscode' }
+        ];
+
+        const isOpenCommand = /(?:kholo|khol\s*do|open|launch|start|chalao|chala\s*do|chalu\s*karo)/i.test(promptLower);
+        if (isOpenCommand && !isDirectMusic) {
+            for (const item of appKeywords) {
+                if (item.regex.test(promptLower)) {
+                    const executed = executeWindowsApp(item.key, cleanUserName);
+                    autoActionData = executed.actionData;
+                    if (!replyRaw || replyRaw.length < 15 || /(?:khol|open|launch)/i.test(replyRaw)) {
+                        replyRaw = `Yes Boss! ${autoActionData.appName} open kar rahi hoon.`;
+                    }
+                    break;
+                }
+            }
         }
 
         res.json({
             reply: replyRaw,
             emotion: emotion,
-            media: autoMedia
+            media: autoMedia,
+            actionData: autoActionData
         });
     } catch (error) {
         console.error('Server error:', error);

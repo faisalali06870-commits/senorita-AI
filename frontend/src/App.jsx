@@ -9,8 +9,12 @@ import LiveScreenPreview from './components/LiveScreenPreview';
 import MediaPlayerCard from './components/MediaPlayerCard';
 import UserProfileModal from './components/UserProfileModal';
 
-const getInitialGreeting = (userName = 'Faisal') =>
-  `Hola ${userName}! Main Senorita-AI hoon, aapki personal companion aur senior coding partner. Main aapke har jazbaat samajhti hoon aur aapke har project me madad karne ke liye taiyar hoon. Aaj hum kya banayein?`;
+const getInitialGreeting = (userName = 'Boss') => {
+  const displayBoss = (!userName || userName.toLowerCase() === 'boss' || userName.toLowerCase() === 'faisal')
+    ? 'Boss'
+    : `Boss ${userName}`;
+  return `Yes ${displayBoss}! Senorita here, ready for your command ⚡ Aapke applications, tasks, coding, screen vision aur music sab kuch execute karne ke liye active hoon. Bataiye Boss, aaj kya command hai?`;
+};
 
 // Helper to filter out code blocks before sending text to SpeechSynthesis/EdgeTTS
 function cleanTextForSpeech(text) {
@@ -27,13 +31,22 @@ export default function App() {
   const [sessions, setSessions] = useState(() => {
     const saved = localStorage.getItem('senorita_sessions');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { }
+      try {
+        const parsed = JSON.parse(saved);
+        // Ensure songs in history do not autoplay on page refresh
+        return parsed.map(session => ({
+          ...session,
+          messages: (session.messages || []).map(m =>
+            m.media ? { ...m, media: { ...m.media, autoPlay: false } } : m
+          )
+        }));
+      } catch (e) { }
     }
     const defaultId = 'sess_' + Date.now();
     const savedUser = localStorage.getItem('senorita_user');
-    let initName = 'Faisal';
+    let initName = 'Boss';
     if (savedUser) {
-      try { initName = JSON.parse(savedUser)?.name || 'Faisal'; } catch (e) { }
+      try { initName = JSON.parse(savedUser)?.name || 'Boss'; } catch (e) { }
     }
     return [{
       id: defaultId,
@@ -42,7 +55,7 @@ export default function App() {
         id: 'msg_0',
         role: 'model',
         content: getInitialGreeting(initName),
-        emotion: 'caring',
+        emotion: 'confident',
         timestamp: Date.now()
       }]
     }];
@@ -53,7 +66,7 @@ export default function App() {
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { }
     }
-    return { name: 'Faisal', avatarId: 'purple', avatarGradient: 'from-purple-600 via-pink-600 to-indigo-600', avatarIcon: '✨' };
+    return { name: 'Boss', avatarId: 'purple', avatarGradient: 'from-purple-600 via-pink-600 to-indigo-600', avatarIcon: '👑' };
   });
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [isFirstVisit, setIsFirstVisit] = useState(() => !localStorage.getItem('senorita_user'));
@@ -145,9 +158,15 @@ export default function App() {
 
   const currentSession = sessions.find(s => s.id === currentSessionId) || sessions[0];
 
-  // Save sessions to localStorage
+  // Save sessions to localStorage (sanitizing media so reload never autoplays previous songs)
   useEffect(() => {
-    localStorage.setItem('senorita_sessions', JSON.stringify(sessions));
+    const sanitized = sessions.map(s => ({
+      ...s,
+      messages: (s.messages || []).map(m =>
+        m.media ? { ...m, media: { ...m.media, autoPlay: false } } : m
+      )
+    }));
+    localStorage.setItem('senorita_sessions', JSON.stringify(sanitized));
   }, [sessions]);
 
   // Auto-scroll chat smoothly inside message container only (prevents window scrolling)
@@ -648,12 +667,22 @@ export default function App() {
 
       const replyText = data?.reply || "I didn't receive a valid reply.";
       const toolAction = data?.toolAction || null;
+      const actionData = data?.actionData || null;
       const media = data?.media || null;
-      const emotion = data?.emotion || 'caring';
+      const emotion = data?.emotion || 'confident';
       setCurrentEmotion(emotion);
 
       if (media) {
         setActiveMedia(media);
+      }
+
+      // Automatically launch app or website link if provided
+      if (actionData && actionData.url) {
+        try {
+          window.open(actionData.url, '_blank', 'noopener,noreferrer');
+        } catch (e) {
+          console.warn('Popup blocked or not permitted:', e);
+        }
       }
 
       const aiMessage = {
@@ -661,6 +690,7 @@ export default function App() {
         role: 'model',
         content: replyText,
         toolAction: toolAction,
+        actionData: actionData,
         media: media,
         emotion: emotion,
         timestamp: Date.now()
@@ -728,8 +758,8 @@ export default function App() {
       messages: [{
         id: 'msg_0',
         role: 'model',
-        content: getInitialGreeting(currentUser?.name || 'Faisal'),
-        emotion: 'caring',
+        content: getInitialGreeting(currentUser?.name || 'Boss'),
+        emotion: 'confident',
         timestamp: Date.now()
       }]
     };
@@ -748,8 +778,8 @@ export default function App() {
           messages: [{
             id: 'msg_0',
             role: 'model',
-            content: getInitialGreeting(currentUser?.name || 'Faisal'),
-            emotion: 'caring',
+            content: getInitialGreeting(currentUser?.name || 'Boss'),
+            emotion: 'confident',
             timestamp: Date.now()
           }]
         };
