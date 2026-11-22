@@ -1,0 +1,10 @@
+{
+  "name": "senorita-ai",
+  "version": "2.5.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend",
+    "start": "node backend/server.js"
+  }
+}
