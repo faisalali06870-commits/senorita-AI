@@ -358,6 +358,23 @@ export default function App() {
         }
 
         speak(directVoiceReply);
+
+        // Instantly display user check-in and Senorita voice response in chat UI
+        const checkinUserMsg = {
+          id: 'msg_' + Date.now(),
+          role: 'user',
+          content: combined,
+          timestamp: Date.now()
+        };
+        const checkinAiMsg = {
+          id: 'msg_' + (Date.now() + 1),
+          role: 'model',
+          content: directVoiceReply,
+          emotion: 'confident',
+          timestamp: Date.now()
+        };
+        setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: [...s.messages, checkinUserMsg, checkinAiMsg] } : s));
+
         return;
       }
 
@@ -368,21 +385,21 @@ export default function App() {
 
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
 
-      // In Hands-Free Senorita Mode: auto-send with generous, human-friendly pauses
+      // In Hands-Free Senorita Mode: auto-send with natural, snappy pause
       if (senoritaModeRef.current) {
         const words = combined.split(/\s+/).filter(Boolean);
-        // Never auto-send fragmented single syllables like "Tu", "Ki", "Ha" — wait for full sentence!
+        // Never auto-send fragmented single syllables like "Tu", "Ki", "Ha" — wait for full command!
         if (words.length < 2 && combined.length < 6) {
           return;
         }
 
-        // Generous 3800ms silence timer so user can speak naturally without being cut off
+        // Snappy 1400ms silence timer so user doesn't wait in silence or feel forced to click mic!
         silenceTimerRef.current = setTimeout(() => {
           const textToSend = latestTranscriptRef.current.trim();
           if (textToSend && textToSend.length > 2) {
             triggerCommit(textToSend);
           }
-        }, 3800);
+        }, 1400);
       }
     };
 
