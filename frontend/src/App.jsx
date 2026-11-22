@@ -9,11 +9,37 @@ import LiveScreenPreview from './components/LiveScreenPreview';
 import MediaPlayerCard from './components/MediaPlayerCard';
 import UserProfileModal from './components/UserProfileModal';
 
-const getInitialGreeting = (userName = 'Boss') => {
+const getTimeBasedGreeting = (userName = 'Boss') => {
   const displayBoss = (!userName || userName.toLowerCase() === 'boss' || userName.toLowerCase() === 'faisal')
     ? 'Boss'
     : `Boss ${userName}`;
-  return `Yes ${displayBoss}! Senorita here, ready for your command ⚡ Aapke applications, tasks, coding, screen vision aur music sab kuch execute karne ke liye active hoon. Bataiye Boss, aaj kya command hai?`;
+
+  const hour = new Date().getHours();
+  let timeSalutation = 'Good morning';
+  let naturalGreetingHindi = 'Aapka system aur tasks execute karne ke liye online hoon';
+
+  if (hour >= 5 && hour < 12) {
+    timeSalutation = 'Good morning';
+    naturalGreetingHindi = 'Senorita online and ready for action. Boliye Boss, aaj ka din kaisa start karein?';
+  } else if (hour >= 12 && hour < 17) {
+    timeSalutation = 'Good afternoon';
+    naturalGreetingHindi = 'Senorita at your service. Boliye Boss, kya task execute karna hai?';
+  } else if (hour >= 17 && hour < 21) {
+    timeSalutation = 'Good evening';
+    naturalGreetingHindi = 'Senorita is here. Boliye Boss, pending tasks execute karu ya koi relaxing music chalao?';
+  } else {
+    timeSalutation = 'Hello';
+    naturalGreetingHindi = 'Working late tonight? Senorita is right here with you. Boliye Boss, kya hukum hai?';
+  }
+
+  const written = `${timeSalutation} ${displayBoss}! Senorita here, ready for your command ⚡ ${naturalGreetingHindi}`;
+  const spoken = `${timeSalutation} ${displayBoss}! Senorita here, ready for your command. ${naturalGreetingHindi.replace(/[⚡👑🎵🌙]/g, '')}`;
+
+  return { written, spoken, timeSalutation };
+};
+
+const getInitialGreeting = (userName = 'Boss') => {
+  return getTimeBasedGreeting(userName).written;
 };
 
 // Helper to filter out code blocks before sending text to SpeechSynthesis/EdgeTTS
@@ -293,19 +319,45 @@ export default function App() {
 
       if (!combined) return;
 
-      // Smart Wake Word Detection ("Senorita", "Hey Senorita", "सेनोरिता")
-      const lowerClean = combined.toLowerCase().replace(/[.,!?;:]/g, '').trim();
-      const standaloneWakes = ['senorita', 'hey senorita', 'hello senorita', 'ok senorita', 'सेनोरिता', 'हे सेनोरिता', 'सुनो सेनोरिता'];
+      // Smart Conversational Presence & Wake Checks (Instant Voice Response like talking to a real human!)
+      const lowerClean = combined.toLowerCase().replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
 
-      // If user calls her name ("Senorita") like Siri / JARVIS:
-      if (standaloneWakes.includes(lowerClean)) {
+      // 1. Natural Check-in: "Senorita sun rahi ho tum?" / "Senorita suno" / "Are you listening"
+      const isListeningCheck = /(?:senorita.*(?:sun\s*rhi|sun\s*rahi|suno|hear\s*me|listening|sun\s*pa\s*rahi)|(?:sun\s*rhi|sun\s*rahi|suno).*senorita|सेनोरिता.*(?:सुन\s*रही|सुनो|आवाज\s*आ\s*रही)|(?:सुन\s*रही|सुनो).*सेनोरिता)/i.test(lowerClean);
+
+      // 2. Sleep Check: "Senorita so gayi kya?" / "so gayi kya"
+      const isSleepCheck = /(?:senorita.*(?:so\s*gayi|sleep|sleeping)|(?:so\s*gayi).*senorita|सेनोरिता.*(?:सो\s*गई|सो\s*रही)|सो\s*गई.*सेनोरिता)/i.test(lowerClean);
+
+      // 3. Status Check: "Senorita kaisi ho?" / "how are you"
+      const isHowAreYou = /(?:senorita.*(?:kaisi\s*ho|how\s*are\s*you)|(?:kaisi\s*ho).*senorita|सेनोरिता.*(?:कैसी\s*हो)|कैसी\s*हो.*सेनोरिता)/i.test(lowerClean);
+
+      // 4. Identity Check: "Senorita tum kaun ho?" / "who are you"
+      const isWhoAreYou = /(?:senorita.*(?:kaun\s*ho|who\s*are\s*you)|(?:kaun\s*ho).*senorita|सेनोरिता.*(?:कौन\s*हो)|कौन\s*हो.*सेनोरिता)/i.test(lowerClean);
+
+      // 5. Standalone Wake Name: "Senorita" / "Hey Senorita" / "Hello Senorita"
+      const standaloneWakes = ['senorita', 'hey senorita', 'hello senorita', 'ok senorita', 'hi senorita', 'सेनोरिता', 'हे सेनोरिता', 'सुनो सेनोरिता', 'नमस्ते सेनोरिता'];
+      const isStandaloneWake = standaloneWakes.includes(lowerClean);
+
+      if (isListeningCheck || isSleepCheck || isHowAreYou || isWhoAreYou || isStandaloneWake) {
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         playJarvisChime('wake');
         speechAccumulatorRef.current = '';
         latestTranscriptRef.current = '';
         setInterimTranscript('');
         setInput('');
-        speak("Yes Boss! Boliye, kya hukum hai? Main sun rahi hoon.");
+
+        let directVoiceReply = "Yes Boss! Boliye, kya hukum hai? Main sun rahi hoon.";
+        if (isListeningCheck) {
+          directVoiceReply = "Yes Boss! Main bilkul active hoon aur sun rahi hoon. Boliye kya hukum hai?";
+        } else if (isSleepCheck) {
+          directVoiceReply = "Nahi Boss! Main hamesha active aur alert hoon aapke liye. Boliye kya kaam hai?";
+        } else if (isHowAreYou) {
+          directVoiceReply = "Main bilkul shandar hoon Boss! Aap bataiye, aaj kya command execute karein?";
+        } else if (isWhoAreYou) {
+          directVoiceReply = "Main Senorita hoon Boss, aapki personal executive AI assistant. Ready for your command!";
+        }
+
+        speak(directVoiceReply);
         return;
       }
 
@@ -439,8 +491,12 @@ export default function App() {
 
     // Strip wake word prefix if present so command is pure and direct
     let cleaned = (textToSend || '').trim();
-    cleaned = cleaned.replace(/^(?:hey\s+|hello\s+|ok\s+)?senorita[,:\s]+/i, '');
-    cleaned = cleaned.replace(/^(?:हे\s+|सुनो\s+)?सेनोरिता[,:\s]+/i, '');
+    cleaned = cleaned.replace(/^(?:hey\s+|hello\s+|ok\s+|hi\s+)?senorita(?:\s+ji|\s+please)?[,:\s]+/i, '');
+    cleaned = cleaned.replace(/^(?:हे\s+|सुनो\s+|नमस्ते\s+)?सेनोरिता(?:\s+जी)?[,:\s]+/i, '');
+    if (!cleaned || cleaned.length < 2) cleaned = textToSend;
+
+    // Play subtle audio acknowledgment chime
+    try { playJarvisChime('wake'); } catch (e) { }
     if (!cleaned || cleaned.length < 2) cleaned = textToSend;
 
     handleSendMessage(cleaned);
@@ -561,6 +617,112 @@ export default function App() {
       setTimeout(startListening, 300);
     }
   };
+
+  const hasGreetedOnStartupRef = useRef(false);
+  const lastHiddenTimeRef = useRef(null);
+
+  // Time-Based Vocal Greeting on Startup (Zero-click Hands-Free)
+  useEffect(() => {
+    if (hasGreetedOnStartupRef.current) return;
+
+    const startupTimer = setTimeout(() => {
+      hasGreetedOnStartupRef.current = true;
+      try {
+        playJarvisChime('wake');
+      } catch (e) { }
+
+      const greeting = getTimeBasedGreeting(currentUser?.name || 'Boss');
+      if (speechEnabled) {
+        speak(greeting.spoken);
+      } else if (senoritaModeRef.current) {
+        startListening();
+      }
+    }, 1200);
+
+    return () => clearTimeout(startupTimer);
+  }, []);
+
+  // Web Browser Autoplay Policy Audio Unlock (For normal browser tabs)
+  useEffect(() => {
+    const unlockAudio = () => {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          if (ctx.state === 'suspended') ctx.resume();
+        }
+      } catch (e) { }
+
+      if (!hasGreetedOnStartupRef.current) {
+        hasGreetedOnStartupRef.current = true;
+        const greeting = getTimeBasedGreeting(currentUser?.name || 'Boss');
+        if (speechEnabled) speak(greeting.spoken);
+      }
+
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+
+    window.addEventListener('click', unlockAudio, { once: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
+
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, [currentUser, speechEnabled]);
+
+  // Laptop Lid Flip (Close & Open) Detection
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        lastHiddenTimeRef.current = Date.now();
+        // Pause listening while laptop lid is shut to save battery & CPU
+        stopListening();
+      } else {
+        // Laptop lid reopened or user switched back to Senorita!
+        const awayDurationMs = lastHiddenTimeRef.current ? (Date.now() - lastHiddenTimeRef.current) : 0;
+        lastHiddenTimeRef.current = null;
+
+        // If away for more than 15 seconds (e.g. lid was closed):
+        if (awayDurationMs > 15000) {
+          try {
+            playJarvisChime('wake');
+          } catch (e) { }
+
+          const hour = new Date().getHours();
+          let welcomePhrase = "Welcome back Boss! Main active hoon aur sun rahi hoon. Boliye kya hukum hai?";
+          if (hour >= 22 || hour < 5) {
+            welcomePhrase = "Welcome back Boss! Raat ko bhi main aapke saath hoon. Boliye kya hukum hai?";
+          }
+
+          if (speechEnabled) {
+            speak(welcomePhrase);
+          } else if (senoritaModeRef.current) {
+            startListening();
+          }
+        } else {
+          // If brief switch, ensure listening is cleanly active
+          if (senoritaModeRef.current && !isSpeakingRef.current && !isBusyRef.current) {
+            startListening();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    const handleFocus = () => {
+      if (senoritaModeRef.current && !isSpeakingRef.current && !isBusyRef.current && !isRecognitionActiveRef.current) {
+        startListening();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [speechEnabled]);
 
   // Live Screen Capture & Stream Methods
   const captureScreenFrame = () => {

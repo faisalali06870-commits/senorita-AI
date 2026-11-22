@@ -14,9 +14,20 @@ If http.Status <> 200 Then
     ' Start Node backend server completely hidden in the background (0 = hidden)
     WshShell.CurrentDirectory = scriptDir
     WshShell.Run "cmd /c node backend/server.js", 0, False
-    WScript.Sleep 2000
+    WScript.Sleep 2500
 End If
 
-' Launch Senorita AI in Dedicated App Mode (No address bar, no tabs, standalone window)
-appCmd = "msedge --app=http://localhost:3000"
+' Locate Edge or Chrome for dedicated App Mode
+edgePath = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+
+browserExe = "msedge"
+If fso.FileExists(edgePath) Then
+    browserExe = """" & edgePath & """"
+ElseIf fso.FileExists(chromePath) Then
+    browserExe = """" & chromePath & """"
+End If
+
+' Launch Senorita AI in Dedicated App Mode (No tabs, no address bar, autoplay unblocked, zero-click mic)
+appCmd = browserExe & " --app=http://localhost:3000 --autoplay-policy=no-user-gesture-required --use-fake-ui-for-media-stream"
 WshShell.Run appCmd, 1, False
