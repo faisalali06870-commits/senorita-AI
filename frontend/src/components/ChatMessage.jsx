@@ -318,15 +318,42 @@ export default function ChatMessage({ message, onSpeak, theme = 'dark', currentU
                   </p>
                 </div>
               </div>
-              <a
-                href={message.actionData.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 flex-shrink-0"
-              >
-                <span>Launch Now</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              {message.actionData.appName === 'WhatsApp' ? (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <a
+                    href="https://api.whatsapp.com/send"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open WhatsApp Mobile App"
+                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-1"
+                  >
+                    <span>App</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <a
+                    href="https://web.whatsapp.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open WhatsApp Web (for PC)"
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all hover:scale-105 active:scale-95 flex items-center gap-1 ${
+                      isDark ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-white/10' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-sm'
+                    }`}
+                  >
+                    <span>Web</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              ) : (
+                <a
+                  href={message.actionData.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 flex-shrink-0"
+                >
+                  <span>Launch Now</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
             </div>
           )}
 
