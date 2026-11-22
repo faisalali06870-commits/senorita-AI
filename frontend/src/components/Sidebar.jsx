@@ -10,7 +10,9 @@ export default function Sidebar({
   isOpen,
   setIsOpen,
   serverStatus,
-  theme = 'dark'
+  theme = 'dark',
+  currentUser,
+  onOpenProfile
 }) {
   const isDark = theme === 'dark';
 
@@ -137,7 +139,7 @@ export default function Sidebar({
           </p>
         </div>
 
-        {/* Footer Server Status */}
+        {/* Footer Server Status & Profile Pill */}
         <div className={`p-3 border-t flex items-center justify-between text-xs ${
           isDark ? 'border-white/10 text-slate-400' : 'border-white/80 text-slate-500'
         }`}>
@@ -145,7 +147,13 @@ export default function Sidebar({
             <span className={`w-2 h-2 rounded-full ${serverStatus === 'online' ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-red-400'} animate-pulse`} />
             <span className="font-mono text-[11px] capitalize">{serverStatus}</span>
           </div>
-          <span className="text-[10px] text-pink-400 font-mono">Faisal's AI</span>
+          <button
+            onClick={onOpenProfile}
+            title="Edit profile & user persona"
+            className="text-[10px] text-pink-400 hover:text-pink-300 font-mono truncate max-w-[120px] transition-colors"
+          >
+            {currentUser?.name ? `${currentUser.name}'s AI` : 'Personal AI'}
+          </button>
         </div>
       </aside>
     </>

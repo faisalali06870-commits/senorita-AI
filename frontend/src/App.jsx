@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, Sparkles, Bot, Code2, Globe, Cpu, Volume2, ArrowRight, Settings2, Radio, Music, Brain, Monitor, Sun, Moon } from 'lucide-react';
+import { Menu, Sparkles, Bot, Code2, Globe, Cpu, Volume2, ArrowRight, Settings2, Radio, Music, Brain, Monitor, Sun, Moon, User } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ChatMessage from './components/ChatMessage';
 import ChatInput from './components/ChatInput';
@@ -7,8 +7,10 @@ import VoiceSettingsModal from './components/VoiceSettingsModal';
 import GlowingOrb from './components/GlowingOrb';
 import LiveScreenPreview from './components/LiveScreenPreview';
 import MediaPlayerCard from './components/MediaPlayerCard';
+import UserProfileModal from './components/UserProfileModal';
 
-const INITIAL_GREETING = "Hola Faisal! Main Senorita-AI hoon, aapki personal companion aur senior coding partner. Main aapke har jazbaat samajhti hoon aur aapke har project me madad karne ke liye taiyar hoon. Aaj hum kya banayein?";
+const getInitialGreeting = (userName = 'Faisal') =>
+  `Hola ${userName}! Main Senorita-AI hoon, aapki personal companion aur senior coding partner. Main aapke har jazbaat samajhti hoon aur aapke har project me madad karne ke liye taiyar hoon. Aaj hum kya banayein?`;
 
 // Helper to filter out code blocks before sending text to SpeechSynthesis/EdgeTTS
 function cleanTextForSpeech(text) {
@@ -28,18 +30,52 @@ export default function App() {
       try { return JSON.parse(saved); } catch (e) { }
     }
     const defaultId = 'sess_' + Date.now();
+    const savedUser = localStorage.getItem('senorita_user');
+    let initName = 'Faisal';
+    if (savedUser) {
+      try { initName = JSON.parse(savedUser)?.name || 'Faisal'; } catch (e) { }
+    }
     return [{
       id: defaultId,
       title: 'New Conversation',
       messages: [{
         id: 'msg_0',
         role: 'model',
-        content: INITIAL_GREETING,
+        content: getInitialGreeting(initName),
         emotion: 'caring',
         timestamp: Date.now()
       }]
     }];
   });
+
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('senorita_user');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return { name: 'Faisal', avatarId: 'purple', avatarGradient: 'from-purple-600 via-pink-600 to-indigo-600', avatarIcon: '✨' };
+  });
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [isFirstVisit, setIsFirstVisit] = useState(() => !localStorage.getItem('senorita_user'));
+
+  const handleSaveUser = (newUser) => {
+    setCurrentUser(newUser);
+    localStorage.setItem('senorita_user', JSON.stringify(newUser));
+    setIsFirstVisit(false);
+
+    setSessions(prev => prev.map(s => {
+      if (s.messages.length === 1 && s.messages[0].id === 'msg_0') {
+        return {
+          ...s,
+          messages: [{
+            ...s.messages[0],
+            content: getInitialGreeting(newUser.name)
+          }]
+        };
+      }
+      return s;
+    }));
+  };
 
   const [currentSessionId, setCurrentSessionId] = useState(() => sessions[0]?.id || 'sess_' + Date.now());
   const [input, setInput] = useState('');
@@ -599,7 +635,8 @@ export default function App() {
           prompt: messageContent,
           history: history.slice(-6),
           imageBase64: currentImage,
-          imageMime: 'image/png'
+          imageMime: 'image/png',
+          userName: currentUser.name
         })
       });
 
@@ -691,7 +728,7 @@ export default function App() {
       messages: [{
         id: 'msg_0',
         role: 'model',
-        content: INITIAL_GREETING,
+        content: getInitialGreeting(currentUser?.name || 'Faisal'),
         emotion: 'caring',
         timestamp: Date.now()
       }]
@@ -711,7 +748,7 @@ export default function App() {
           messages: [{
             id: 'msg_0',
             role: 'model',
-            content: INITIAL_GREETING,
+            content: getInitialGreeting(currentUser?.name || 'Faisal'),
             emotion: 'caring',
             timestamp: Date.now()
           }]
@@ -737,7 +774,7 @@ export default function App() {
   const isDark = theme === 'dark';
 
   return (
-    <div className={`relative flex h-screen overflow-hidden font-sans transition-colors duration-300 ${
+    <div className={`relative flex h-[100dvh] w-screen overflow-hidden font-sans transition-colors duration-300 ${
       isDark ? 'bg-[#060913] text-slate-100' : 'bg-[#f0f3fa] text-slate-800'
     }`}>
       {/* Ambient Glowing Gradient Spheres for Glassmorphism Refraction */}
@@ -762,6 +799,8 @@ export default function App() {
         setIsOpen={setSidebarOpen}
         serverStatus={serverStatus}
         theme={theme}
+        currentUser={currentUser}
+        onOpenProfile={() => setProfileModalOpen(true)}
       />
 
       {/* Main Chat Workspace */}
@@ -769,12 +808,12 @@ export default function App() {
         isDark ? 'bg-[#070b14]/55' : 'bg-white/45'
       } backdrop-blur-2xl`}>
         {/* Top Navbar */}
-        <header className={`h-16 px-4 md:px-6 border-b flex items-center justify-between flex-shrink-0 z-20 transition-colors duration-300 ${
+        <header className={`h-16 px-3 sm:px-4 md:px-6 border-b flex items-center justify-between flex-shrink-0 z-20 transition-colors duration-300 ${
           isDark
             ? 'border-white/10 bg-slate-950/45 backdrop-blur-2xl shadow-sm'
             : 'border-white/80 bg-white/70 backdrop-blur-2xl shadow-sm'
         }`}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className={`p-2 rounded-lg transition-colors md:hidden ${
@@ -784,10 +823,10 @@ export default function App() {
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center text-white shadow-sm shadow-pink-500/20">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center text-white shadow-sm shadow-pink-500/20">
                 <Sparkles className="w-4 h-4" />
               </div>
-              <h2 className={`text-sm font-semibold truncate max-w-[180px] sm:max-w-md ${
+              <h2 className={`text-xs sm:text-sm font-semibold truncate max-w-[130px] sm:max-w-md ${
                 isDark ? 'text-slate-200' : 'text-slate-800'
               }`}>
                 {currentSession?.title || 'Senorita-AI'}
@@ -795,12 +834,26 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Live Screen Sharing Header Toggle */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* User Profile / Login Pill */}
+            <button
+              onClick={() => setProfileModalOpen(true)}
+              title={`Logged in as ${currentUser.name}. Click to change name/avatar.`}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                isDark
+                  ? 'bg-slate-900/80 hover:bg-slate-800 text-slate-200 border-white/10 hover:border-pink-500/40 shadow-sm'
+                  : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300 shadow-sm'
+              }`}
+            >
+              <span className="text-xs">{currentUser.avatarIcon || '✨'}</span>
+              <span className="max-w-[65px] sm:max-w-[110px] truncate">{currentUser.name}</span>
+            </button>
+
+            {/* Live Screen Sharing Header Toggle (Desktop Only) */}
             <button
               onClick={isScreenSharing ? stopScreenShare : startScreenShare}
               title={isScreenSharing ? "Click to stop live screen sharing" : "Share your computer screen live with Senorita"}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono border transition-all ${
+              className={`hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono border transition-all ${
                 isScreenSharing
                   ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/50 shadow-sm shadow-emerald-500/20'
                   : isDark
@@ -813,7 +866,7 @@ export default function App() {
             </button>
 
             {/* Senorita Hands-Free Quick Indicator */}
-            <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono border transition-all ${
+            <div className={`hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-mono border transition-all ${
               senoritaMode
                 ? 'bg-pink-950/50 text-pink-300 border-pink-500/40 shadow-sm shadow-pink-500/20'
                 : isDark
@@ -828,7 +881,7 @@ export default function App() {
             <button
               onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
               title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              className={`p-1.5 rounded-lg border transition-all ${
+              className={`p-1.5 rounded-xl border transition-all ${
                 isDark
                   ? 'border-white/10 bg-slate-900/80 text-amber-300 hover:text-amber-200 hover:bg-slate-800'
                   : 'border-slate-200 bg-white text-slate-700 hover:text-purple-600 hover:bg-slate-100 shadow-sm'
@@ -841,7 +894,7 @@ export default function App() {
             <button
               onClick={() => setVoiceSettingsOpen(true)}
               title="Voice & Speech Settings"
-              className={`p-1.5 rounded-lg transition-colors ${
+              className={`p-1.5 rounded-xl transition-colors ${
                 isDark
                   ? 'text-slate-400 hover:text-pink-300 hover:bg-slate-800'
                   : 'text-slate-600 hover:text-pink-600 hover:bg-slate-100'
@@ -850,7 +903,7 @@ export default function App() {
               <Settings2 className="w-4 h-4" />
             </button>
 
-            <div className={`hidden md:flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border ${
+            <div className={`hidden lg:flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border ${
               isDark
                 ? 'text-slate-400 bg-slate-900/80 border-white/10'
                 : 'text-slate-600 bg-white border-slate-200 shadow-sm'
@@ -862,9 +915,9 @@ export default function App() {
         </header>
 
         {/* Chat Messages Scrollable Container */}
-        <main ref={chatScrollContainerRef} className="flex-1 overflow-y-auto px-2 md:px-4 py-4 space-y-3">
+        <main ref={chatScrollContainerRef} className="flex-1 overflow-y-auto px-1 sm:px-3 md:px-4 py-3 sm:py-4 space-y-2.5 sm:space-y-3">
           {currentSession?.messages.length <= 1 ? (
-            <div className="max-w-2xl mx-auto px-4 py-8 flex flex-col items-center text-center space-y-5">
+            <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8 flex flex-col items-center text-center space-y-4 sm:space-y-5">
               {/* Centerpiece 3D Glowing Holographic Orb */}
               <GlowingOrb
                 isListening={isListening}
@@ -873,25 +926,25 @@ export default function App() {
               />
 
               <div>
-                <h3 className={`text-2xl font-bold tracking-wide ${
+                <h3 className={`text-xl sm:text-2xl font-bold tracking-wide ${
                   isDark ? 'text-white' : 'text-slate-900'
                 }`}>
-                  Welcome back, Faisal!
+                  Welcome back, {currentUser.name}!
                 </h3>
-                <p className={`text-sm mt-1 max-w-md ${
+                <p className={`text-xs sm:text-sm mt-1 max-w-md ${
                   isDark ? 'text-slate-400' : 'text-slate-600'
                 }`}>
-                  I am Senorita-AI. I understand your feelings, run code live, play your songs & videos in-app, and listen hands-free!
+                  I am Senorita-AI, your personal companion. I understand your feelings, run code live, play your songs & videos in-app, and listen hands-free!
                 </p>
               </div>
 
               {/* Quick Prompt Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 w-full pt-2">
                 {quickActions.map((action, i) => (
                   <button
                     key={i}
                     onClick={() => handleSendMessage(action.prompt)}
-                    className={`p-3.5 rounded-2xl text-left transition-all hover:scale-[1.01] group shadow-lg backdrop-blur-xl ${
+                    className={`p-3 sm:p-3.5 rounded-2xl text-left transition-all hover:scale-[1.01] group shadow-lg backdrop-blur-xl ${
                       isDark
                         ? 'bg-slate-900/60 hover:bg-slate-850/80 border border-white/10 hover:border-pink-500/40 text-slate-200 hover:text-white'
                         : 'bg-white/80 hover:bg-white border border-slate-200/80 hover:border-purple-400 text-slate-700 hover:text-slate-900'
@@ -901,7 +954,7 @@ export default function App() {
                       <span>{action.desc}</span>
                       <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <div className="text-sm font-medium">
+                    <div className="text-xs sm:text-sm font-medium">
                       {action.title}
                     </div>
                   </button>
@@ -909,24 +962,25 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto space-y-3">
+            <div className="max-w-4xl mx-auto space-y-2.5 sm:space-y-3">
               {currentSession.messages.map((msg) => (
                 <ChatMessage
                   key={msg.id}
                   message={msg}
                   onSpeak={speak}
                   theme={theme}
+                  currentUser={currentUser}
                 />
               ))}
 
               {isLoading && (
-                <div className={`py-4 px-5 rounded-3xl flex items-center gap-4 max-w-md backdrop-blur-xl border ${
+                <div className={`py-3.5 px-4 sm:px-5 rounded-2xl sm:rounded-3xl flex items-center gap-3 sm:gap-4 max-w-md backdrop-blur-xl border ${
                   isDark
                     ? 'bg-slate-900/50 border-white/10 text-slate-200 shadow-xl'
                     : 'bg-white/70 border-white/80 text-slate-800 shadow-lg'
                 }`}>
-                  <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center text-white shadow-md animate-pulse">
-                    <Sparkles className="w-5 h-5" />
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center text-white shadow-md animate-pulse">
+                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="text-xs font-semibold text-pink-400">Senorita-AI is thinking & analyzing...</div>
@@ -944,7 +998,7 @@ export default function App() {
         </main>
 
         {/* Chat Input Bar */}
-        <footer className="flex-shrink-0 px-2 md:px-4 pb-3">
+        <footer className="flex-shrink-0 px-1.5 sm:px-3 md:px-4 pb-2 sm:pb-3">
           <ChatInput
             input={input}
             setInput={setInput}
@@ -990,6 +1044,19 @@ export default function App() {
         speechPitch={speechPitch}
         onPitchChange={handlePitchChange}
         onTestVoice={handleTestVoice}
+      />
+
+      {/* Personal User Profile & Login Modal */}
+      <UserProfileModal
+        isOpen={profileModalOpen || isFirstVisit}
+        onClose={() => {
+          setProfileModalOpen(false);
+          setIsFirstVisit(false);
+        }}
+        currentUser={currentUser}
+        onSaveUser={handleSaveUser}
+        theme={theme}
+        isFirstTime={isFirstVisit}
       />
     </div>
   );

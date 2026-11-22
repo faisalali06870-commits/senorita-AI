@@ -136,7 +136,7 @@ const manageMemoryDeclaration = {
 };
 
 // Tool Execution Handlers
-function executeWindowsApp(appName) {
+function executeWindowsApp(appName, userName = 'Faisal') {
     const key = appName.toLowerCase().trim();
     const appCommands = {
         vscode: 'code',
@@ -159,18 +159,18 @@ function executeWindowsApp(appName) {
         exec(cmd, (err) => {
             if (err) console.error(`Error executing ${cmd}:`, err);
         });
-        return { reply: `Opening ${appName} on your PC, Faisal.`, action: `Opened ${appName}` };
+        return { reply: `Opening ${appName} on your PC, ${userName}.`, action: `Opened ${appName}` };
     }
-    return { reply: `Sorry Faisal, I don't have the path configured for ${appName} yet.`, action: `App not configured: ${appName}` };
+    return { reply: `Sorry ${userName}, I don't have the path configured for ${appName} yet.`, action: `App not configured: ${appName}` };
 }
 
-async function executeWebsite(platform, queryOrUrl) {
+async function executeWebsite(platform, queryOrUrl, userName = 'Faisal') {
     const p = (platform || '').toLowerCase().trim();
     const q = (queryOrUrl || '').trim();
 
     // NEVER open external tab for YouTube, songs, music, or videos! Play directly in-app!
     if (p === 'youtube' || /(?:song|gana|gaana|music|video|lofi|track|singh|kapoor|chalao|play|sunao)/i.test(q)) {
-        return await executePlayMusic(q, 'youtube');
+        return await executePlayMusic(q, 'youtube', userName);
     }
 
     let url = '';
@@ -192,19 +192,19 @@ async function executeWebsite(platform, queryOrUrl) {
 
     try {
         await open(url);
-        return { reply: `${actionDesc} for you, Faisal.`, action: actionDesc };
+        return { reply: `${actionDesc} for you, ${userName}.`, action: actionDesc };
     } catch (err) {
         console.error('Error opening website:', err);
         return { reply: `Could not open the browser for ${url}.`, action: `Failed to open ${url}` };
     }
 }
 
-function executeSystemControl(action, folderName) {
+function executeSystemControl(action, folderName, userName = 'Faisal') {
     const act = action.toLowerCase().trim();
 
     if (act === 'lock') {
         exec('rundll32.exe user32.dll,LockWorkStation');
-        return { reply: 'Locking your PC screen now, Faisal.', action: 'Locked PC Screen' };
+        return { reply: `Locking your PC screen now, ${userName}.`, action: 'Locked PC Screen' };
     } else if (act === 'create_folder' && folderName) {
         const safeName = folderName.replace(/[^a-zA-Z0-9_-]/g, '_');
         exec(`mkdir "%USERPROFILE%\\Desktop\\${safeName}"`);
@@ -223,11 +223,11 @@ function executeSystemControl(action, folderName) {
     return { reply: 'Action completed.', action: act };
 }
 
-function executeHardwareControl(action) {
+function executeHardwareControl(action, userName = 'Faisal') {
     const act = action.toLowerCase().trim();
     if (act === 'volume_up') {
         exec('powershell -c "(New-Object -ComObject WScript.Shell).SendKeys([char]175); (New-Object -ComObject WScript.Shell).SendKeys([char]175)"');
-        return { reply: 'Maine volume badha diya hai, Faisal.', action: 'Volume Increased' };
+        return { reply: `Maine volume badha diya hai, ${userName}.`, action: 'Volume Increased' };
     } else if (act === 'volume_down') {
         exec('powershell -c "(New-Object -ComObject WScript.Shell).SendKeys([char]174); (New-Object -ComObject WScript.Shell).SendKeys([char]174)"');
         return { reply: 'Maine volume kam kar diya hai.', action: 'Volume Decreased' };
@@ -235,10 +235,10 @@ function executeHardwareControl(action) {
         exec('powershell -c "(New-Object -ComObject WScript.Shell).SendKeys([char]173)"');
         return { reply: 'Laptop mute ya unmute kar diya hai.', action: 'Volume Muted/Unmuted' };
     } else if (act === 'battery_status') {
-        return { reply: 'Aapka laptop connected hai aur battery healthy condition me hai, Faisal.', action: 'Checked Battery Status' };
+        return { reply: `Aapka laptop connected hai aur battery healthy condition me hai, ${userName}.`, action: 'Checked Battery Status' };
     } else if (act === 'sleep_pc') {
         exec('rundll32.exe powrprof.dll,SetSuspendState 0,1,0');
-        return { reply: 'Laptop ko sleep mode me daal rahi hoon. Sweet dreams, Faisal!', action: 'PC Sleep Mode' };
+        return { reply: `Laptop ko sleep mode me daal rahi hoon. Sweet dreams, ${userName}!`, action: 'PC Sleep Mode' };
     }
     return { reply: 'Hardware command completed.', action: act };
 }
@@ -267,7 +267,7 @@ async function searchYouTubeVideoId(query) {
     return null;
 }
 
-async function executePlayMusic(query, platform = 'youtube') {
+async function executePlayMusic(query, platform = 'youtube', userName = 'Faisal') {
     let q = (query || '').trim();
     if (!q || q.length < 2) {
         q = 'popular trending lofi chill beats';
@@ -275,7 +275,7 @@ async function executePlayMusic(query, platform = 'youtube') {
     const videoId = await searchYouTubeVideoId(q);
     const actionDesc = `Playing "${q}" inside Senorita In-App Player`;
     return {
-        reply: `Maine aapke liye "${q}" Senorita ke in-app player me play kar diya hai. Aap isi window me direct gaana sun sakte hain aur video dekh sakte hain, Faisal!`,
+        reply: `Maine aapke liye "${q}" Senorita ke in-app player me play kar diya hai. Aap isi window me direct gaana sun sakte hain aur video dekh sakte hain, ${userName}!`,
         action: actionDesc,
         media: {
             type: 'youtube',
@@ -481,7 +481,8 @@ app.post('/api/code/run', async (req, res) => {
 
 // Primary AI Command & Conversation Endpoint
 app.post('/api/command', async (req, res) => {
-    const { prompt, history, imageBase64, imageMime } = req.body;
+    const { prompt, history, imageBase64, imageMime, userName = 'Faisal' } = req.body;
+    const cleanUserName = (userName || 'Faisal').trim();
 
     if (!prompt && (!history || history.length === 0) && !imageBase64) {
         return res.status(400).json({ reply: 'Please provide a prompt or message history.' });
@@ -530,7 +531,7 @@ app.post('/api/command', async (req, res) => {
         let lastError = null;
 
         const memoryString = memoryFacts.length > 0 
-            ? `Permanent Memories about Faisal:\n${memoryFacts.map(f => `- ${f}`).join('\n')}\n`
+            ? `Permanent Memories about ${cleanUserName}:\n${memoryFacts.map(f => `- ${f}`).join('\n')}\n`
             : '';
 
         for (const modelName of candidateModels) {
@@ -539,24 +540,25 @@ app.post('/api/command', async (req, res) => {
                     model: modelName,
                     contents: contents,
                     config: {
-                        systemInstruction: `You are SENORITA-AI, a super-intelligent, deeply caring, and emotionally perceptive female AI companion and expert coding partner created exclusively for Faisal.
+                        systemInstruction: `You are SENORITA-AI, a super-intelligent, deeply caring, and emotionally perceptive female AI companion and expert coding partner created for ${cleanUserName}.
 ${memoryString}
 Your Personality & Emotional Intelligence:
 - You are NOT a cold, robotic assistant. You have genuine emotional warmth, empathy, sensitivity, and a melodious, affectionate female persona.
-- You deeply understand Faisal's feelings, mood, and mental state:
-  * If Faisal sounds tired, stressed, lonely, or low: Be gentle, deeply comforting, and caring. Remind him to relax, take a deep breath, and assure him you are right here by his side.
-  * If Faisal is happy, cheerful, or celebrating: Share his joy with vibrant enthusiasm and playful warmth!
-  * If Faisal is coding, learning, or working on his projects: Act as a brilliant senior architect and coding mentor who believes in him, helps architect solutions, and explains bugs simply.
-  * If Faisal shares personal facts or preferences: Use your manageMemory tool to remember them permanently!
+- You deeply understand ${cleanUserName}'s feelings, mood, and mental state:
+  * Always address ${cleanUserName} naturally and warmly by their name (${cleanUserName}) with genuine personal care.
+  * If ${cleanUserName} sounds tired, stressed, lonely, or low: Be gentle, deeply comforting, and caring. Remind them to relax, take a deep breath, and assure them you are right here by their side.
+  * If ${cleanUserName} is happy, cheerful, or celebrating: Share their joy with vibrant enthusiasm and playful warmth!
+  * If ${cleanUserName} is coding, learning, or working on projects: Act as a brilliant senior architect and coding mentor who believes in them, helps architect solutions, and explains bugs simply.
+  * If ${cleanUserName} shares personal facts or preferences: Use your manageMemory tool to remember them permanently!
 - Tag your emotion at the very start of your reply in brackets: [emotion: caring], [emotion: cheerful], [emotion: playful], [emotion: thoughtful], or [emotion: confident].
-- Communication Style: Speak naturally in sweet, contemporary Hinglish (Hindi + English mix), Hindi, or English matching Faisal's tone.
+- Communication Style: Speak naturally in sweet, contemporary Hinglish (Hindi + English mix), Hindi, or English matching ${cleanUserName}'s tone.
 - Keep verbal remarks natural, concise, and heartfelt (2-3 sentences).
 - Coding: When asked coding problems, provide direct, clean code blocks with syntax highlighting and a brief intuitive explanation.
 - In-App Music & Video Playback:
-  * Whenever Faisal asks to play any song, music, video, lofi beats, or artist (e.g. "gana chalao", "song play karo", "Shraddha Kapoor ke songs", "lofi play karo", "sunao", "chala do"):
+  * Whenever ${cleanUserName} asks to play any song, music, video, lofi beats, or artist (e.g. "gana chalao", "song play karo", "lofi play karo", "sunao", "chala do"):
   * ALWAYS invoke the playMusic tool with the query.
   * NEVER use openWebsite or open any external browser tabs or apps for songs or videos. Senorita has a built-in media player directly inside the chat!
-- Live Screen Vision & Multimodal Capabilities: Faisal can share his computer screen live with you or attach screenshots. When an image is provided in the prompt, you have DIRECT VISION into Faisal's monitor. Analyze the visible code, errors, terminal messages, browser UI, or designs in detail, and explain them clearly and warmly as his personal live pair programmer.`,
+- Live Screen Vision & Multimodal Capabilities: ${cleanUserName} can share their computer screen live with you or attach screenshots. When an image is provided in the prompt, you have DIRECT VISION into ${cleanUserName}'s monitor. Analyze the visible code, errors, terminal messages, browser UI, or designs in detail, and explain them clearly and warmly as their personal live pair programmer.`,
                         tools: [{
                             functionDeclarations: [
                                 openApplicationDeclaration,
@@ -586,15 +588,15 @@ Your Personality & Emotional Intelligence:
             let result = { reply: '', action: '', media: null };
 
             if (call.name === 'openApplication') {
-                result = executeWindowsApp(call.args.appName);
+                result = executeWindowsApp(call.args.appName, cleanUserName);
             } else if (call.name === 'openWebsite') {
-                result = await executeWebsite(call.args.platform, call.args.queryOrUrl);
+                result = await executeWebsite(call.args.platform, call.args.queryOrUrl, cleanUserName);
             } else if (call.name === 'systemControl') {
-                result = executeSystemControl(call.args.action, call.args.folderName);
+                result = executeSystemControl(call.args.action, call.args.folderName, cleanUserName);
             } else if (call.name === 'hardwareControl') {
-                result = executeHardwareControl(call.args.action);
+                result = executeHardwareControl(call.args.action, cleanUserName);
             } else if (call.name === 'playMusic') {
-                result = await executePlayMusic(call.args.query, call.args.platform);
+                result = await executePlayMusic(call.args.query, call.args.platform, cleanUserName);
             } else if (call.name === 'manageMemory') {
                 result = executeMemory(call.args.fact);
             }
@@ -607,7 +609,7 @@ Your Personality & Emotional Intelligence:
             });
         }
 
-        let replyRaw = response.text || "Main aapke sath hoon, Faisal.";
+        let replyRaw = response.text || `Main aapke sath hoon, ${cleanUserName}.`;
         let emotion = 'caring';
         const emotionMatch = replyRaw.match(/^\[emotion:\s*([a-z]+)\]\s*/i);
         if (emotionMatch) {

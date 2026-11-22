@@ -14,7 +14,7 @@ const EMOTION_MAP = {
   confident: { label: 'Ready & Confident', emoji: '⚡', style: 'border-cyan-500/30 text-cyan-300 bg-cyan-950/40' },
 };
 
-export default function ChatMessage({ message, onSpeak, theme = 'dark' }) {
+export default function ChatMessage({ message, onSpeak, theme = 'dark', currentUser }) {
   const isAi = message.role === 'model' || message.role === 'assistant';
   const isDark = theme === 'dark';
   const [copiedIndex, setCopiedIndex] = useState(null);
@@ -65,23 +65,23 @@ export default function ChatMessage({ message, onSpeak, theme = 'dark' }) {
   };
 
   return (
-    <div className={`w-full flex ${isAi ? 'justify-start' : 'justify-end'} py-2 px-2 md:px-4 transition-all`}>
-      <div className={`flex gap-3.5 w-full ${isAi ? 'max-w-3xl' : 'max-w-2xl flex-row-reverse'}`}>
+    <div className={`w-full flex ${isAi ? 'justify-start' : 'justify-end'} py-1.5 sm:py-2 px-1 sm:px-2 md:px-4 transition-all`}>
+      <div className={`flex gap-2 sm:gap-3.5 w-full ${isAi ? 'max-w-[96%] sm:max-w-2xl md:max-w-3xl' : 'max-w-[92%] sm:max-w-xl md:max-w-2xl flex-row-reverse'}`}>
         {/* Avatar */}
-        <div className="flex-shrink-0 pt-1">
+        <div className="flex-shrink-0 pt-0.5 sm:pt-1">
           {isAi ? (
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/25 ring-1 ring-purple-400/40">
-              <Sparkles className="w-5 h-5 animate-pulse" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/25 ring-1 ring-purple-400/40">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
             </div>
           ) : (
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-400/30">
-              <User className="w-5 h-5" />
+            <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-gradient-to-tr ${currentUser?.avatarGradient || 'from-blue-600 via-indigo-600 to-cyan-500'} flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 ring-1 ring-white/30 text-xs sm:text-sm font-semibold`}>
+              <span>{currentUser?.avatarIcon || '👤'}</span>
             </div>
           )}
         </div>
 
         {/* Message Glass Bubble */}
-        <div className={`flex-1 rounded-3xl p-4 md:p-5 backdrop-blur-2xl border transition-all relative overflow-hidden ${
+        <div className={`flex-1 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 backdrop-blur-2xl border transition-all relative overflow-hidden ${
           isAi
             ? isDark
               ? 'bg-slate-900/40 border-white/10 text-slate-100 shadow-[0_8px_32px_0_rgba(0,0,0,0.36)]'
@@ -100,7 +100,7 @@ export default function ChatMessage({ message, onSpeak, theme = 'dark' }) {
             <span className={`font-semibold tracking-wide ${
               isDark ? 'text-slate-200' : 'text-slate-800'
             }`}>
-              {isAi ? 'Senorita-AI' : 'Faisal'}
+              {isAi ? 'Senorita-AI' : (currentUser?.name || 'Faisal')}
             </span>
             <div className="flex items-center gap-1.5">
               {isAi && onSpeak && (

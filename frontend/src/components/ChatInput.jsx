@@ -177,7 +177,7 @@ export default function ChatInput({
               type="button"
               onClick={onToggleScreenShare}
               title={isScreenSharing ? "Click to stop live screen share" : "Share your computer screen live with Senorita"}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
+              className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
                 isScreenSharing
                   ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-500/20'
                   : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800'
@@ -290,8 +290,11 @@ export default function ChatInput({
       </div>
 
       <div className="text-center mt-2">
-        <p className="text-[11px] text-slate-400">
+        <p className="hidden sm:block text-[11px] text-slate-400">
           Tip: Press <strong className="text-pink-400">Win + Shift + S</strong> to snip any error on your screen, then press <strong className="text-pink-400">Ctrl + V</strong> here to let Senorita solve it!
+        </p>
+        <p className="sm:hidden text-[11px] text-slate-400">
+          Tip: Tap <strong className="text-pink-400">Mic</strong> to talk or upload images directly to Senorita!
         </p>
       </div>
     </div>
