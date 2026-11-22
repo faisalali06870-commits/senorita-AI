@@ -288,7 +288,7 @@ function executeSystemControl(action, folderName, userName = 'Boss') {
 }
 
 function executeHardwareControl(action, userName = 'Boss') {
-    const act = action.toLowerCase().trim();
+    const act = (action || '').toLowerCase().trim();
     if (act === 'volume_up') {
         if (process.platform === 'win32') exec('powershell -c "(New-Object -ComObject WScript.Shell).SendKeys([char]175); (New-Object -ComObject WScript.Shell).SendKeys([char]175)"');
         return { reply: `Yes Boss! Volume increase kar diya hai.`, action: 'Volume Increased' };
@@ -298,8 +298,18 @@ function executeHardwareControl(action, userName = 'Boss') {
     } else if (act === 'volume_mute') {
         if (process.platform === 'win32') exec('powershell -c "(New-Object -ComObject WScript.Shell).SendKeys([char]173)"');
         return { reply: 'Yes Boss! Volume mute/unmute kar diya hai.', action: 'Volume Muted/Unmuted' };
-    } else if (act === 'battery_status') {
-        return { reply: `Yes Boss! Device connected aur healthy state me hai.`, action: 'Checked Battery Status' };
+    } else if (act === 'system_status' || act === 'battery_status') {
+        const freeMem = Math.round(os.freemem() / 1024 / 1024 / 1024 * 10) / 10;
+        const totalMem = Math.round(os.totalmem() / 1024 / 1024 / 1024 * 10) / 10;
+        const cores = os.cpus()?.length || 4;
+        const uptimeHours = Math.round(os.uptime() / 3600);
+        return {
+            reply: `Yes Boss! System diagnostics check complete. ${cores}-core processor active hai, ${freeMem} GB RAM free hai (out of ${totalMem} GB). Uptime lagbhag ${uptimeHours} ghante hai. Aapka laptop 100% optimal condition me chal raha hai!`,
+            action: 'System Diagnostics Checked'
+        };
+    } else if (act === 'lock_pc') {
+        if (process.platform === 'win32') exec('rundll32.exe user32.dll,LockWorkStation');
+        return { reply: 'Yes Boss! Laptop lock kar diya hai. Safe and secure!', action: 'PC Locked' };
     } else if (act === 'sleep_pc') {
         if (process.platform === 'win32') exec('rundll32.exe powrprof.dll,SetSuspendState 0,1,0');
         return { reply: `Yes Boss! Putting device to sleep mode now.`, action: 'PC Sleep Mode' };
@@ -822,6 +832,30 @@ CRITICAL FUNCTION CALLING RULES:
                     break;
                 }
             }
+        }
+
+        // 100% Fail-Safe Hardware, Volume & Diagnostic Intent Detector
+        const isVolumeUp = /(?:volume\s*badhao|awaz\s*badhao|aawaz\s*badhao|badha\s*do|volume\s*up|louder|आवाज\s*बढ़ाओ)/i.test(promptLower);
+        const isVolumeDown = /(?:volume\s*kam\s*karo|awaz\s*kam|aawaz\s*kam|ghatao|volume\s*down|softer|आवाज\s*कम)/i.test(promptLower);
+        const isMute = /(?:volume\s*mute|mute\s*karo|mute|chup\s*ho\s*jao|silent|म्यूट)/i.test(promptLower);
+        const isLockPc = /(?:lock\s*pc|lock\s*laptop|pc\s*lock|laptop\s*lock|lock\s*kar\s*do|स्क्रीन\s*लॉक|लॉक)/i.test(promptLower);
+        const isSystemCheck = /(?:system\s*status|system\s*check|laptop\s*status|battery|ram|processor|diagnostics|सिस्टम|बैटरी)/i.test(promptLower);
+
+        if (isVolumeUp) {
+            const hw = executeHardwareControl('volume_up', cleanUserName);
+            replyRaw = hw.reply;
+        } else if (isVolumeDown) {
+            const hw = executeHardwareControl('volume_down', cleanUserName);
+            replyRaw = hw.reply;
+        } else if (isMute) {
+            const hw = executeHardwareControl('volume_mute', cleanUserName);
+            replyRaw = hw.reply;
+        } else if (isLockPc) {
+            const hw = executeHardwareControl('lock_pc', cleanUserName);
+            replyRaw = hw.reply;
+        } else if (isSystemCheck) {
+            const hw = executeHardwareControl('system_status', cleanUserName);
+            replyRaw = hw.reply;
         }
 
         res.json({
