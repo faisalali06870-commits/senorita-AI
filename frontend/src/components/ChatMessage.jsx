@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Bot, User, Copy, Check, Volume2, Sparkles, Terminal, Play, Loader2, X, ExternalLink } from 'lucide-react';
+import { Bot, User, Copy, Check, Volume2, Sparkles, Terminal, Play, Loader2, X, ExternalLink, Mail } from 'lucide-react';
 import MediaPlayerCard from './MediaPlayerCard';
 
 const EMOTION_MAP = {
@@ -298,8 +298,47 @@ export default function ChatMessage({ message, onSpeak, theme = 'dark', currentU
             {message.content}
           </ReactMarkdown>
 
+          {/* JARVIS Email Draft Card */}
+          {message.actionData && message.actionData.type === 'SEND_EMAIL' && (
+            <div className={`mt-3 p-4 rounded-2xl border transition-all shadow-xl ${
+              isDark
+                ? 'bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-slate-900/70 border-indigo-500/30 text-slate-200'
+                : 'bg-indigo-50/90 border-indigo-200 text-slate-800'
+            }`}>
+              <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-indigo-400">JARVIS Email Composer</span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono">
+                  Drafted by Senorita
+                </span>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                <p><span className="text-slate-400 font-semibold">To:</span> {message.actionData.to || 'No recipient specified'}</p>
+                <p><span className="text-slate-400 font-semibold">Subject:</span> {message.actionData.subject}</p>
+                <div className="mt-2 p-2.5 rounded-xl bg-black/30 border border-white/5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                  {message.actionData.body}
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <a
+                  href={message.actionData.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5"
+                >
+                  <span>Open in Gmail & Send</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Action Launch Card (WhatsApp, Chrome, YouTube, Website, Apps) */}
-          {message.actionData && message.actionData.url && (
+          {message.actionData && message.actionData.url && message.actionData.type !== 'SEND_EMAIL' && (
             <div className={`mt-3 p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 shadow-lg ${
               isDark
                 ? 'bg-gradient-to-r from-emerald-950/40 via-purple-950/30 to-slate-900/60 border-emerald-500/30'

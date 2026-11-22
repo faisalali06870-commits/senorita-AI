@@ -676,12 +676,22 @@ export default function App() {
         setActiveMedia(media);
       }
 
-      // Automatically launch app or website link if provided
+      // Automatically dispatch app, email, or website link
       if (actionData && actionData.url) {
         try {
-          window.open(actionData.url, '_blank', 'noopener,noreferrer');
+          if (actionData.type === 'SEND_EMAIL') {
+            window.open(actionData.url, '_blank', 'noopener,noreferrer');
+          } else if (actionData.appName === 'WhatsApp') {
+            // Direct protocol trigger on phone / desktop without popup blocker
+            window.location.href = "whatsapp://send";
+            setTimeout(() => {
+              window.open(actionData.url, '_blank', 'noopener,noreferrer');
+            }, 600);
+          } else {
+            window.open(actionData.url, '_blank', 'noopener,noreferrer');
+          }
         } catch (e) {
-          console.warn('Popup blocked or not permitted:', e);
+          console.warn('Direct launch handled:', e);
         }
       }
 

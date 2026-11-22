@@ -135,6 +135,30 @@ const manageMemoryDeclaration = {
     }
 };
 
+// 7. Tool Declaration: Draft & Send Email (JARVIS Email Assistant)
+const sendEmailDeclaration = {
+    name: 'sendEmail',
+    description: 'Drafts, composes, and sends an email. Formats professional subject, recipient, and full courteous body text.',
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            to: {
+                type: Type.STRING,
+                description: 'Recipient email address (e.g. "team@example.com" or empty if user didn\'t specify)'
+            },
+            subject: {
+                type: Type.STRING,
+                description: 'Clear, professional subject line of the email'
+            },
+            body: {
+                type: Type.STRING,
+                description: 'Full, well-structured, professional body of the email with greeting, message, and sign-off'
+            }
+        },
+        required: ['subject', 'body']
+    }
+};
+
 // Tool Execution Handlers
 function executeWindowsApp(appName, userName = 'Boss') {
     const key = (appName || '').toLowerCase().trim();
@@ -307,6 +331,11 @@ async function executePlayMusic(query, platform = 'youtube', userName = 'Boss') 
     let q = (query || '').trim();
     if (!q || q.length < 2) {
         q = 'popular trending lofi chill beats';
+    } else {
+        // If query looks like an artist or singer name without a specific track title
+        if (!/(?:song|gana|gaana|track|remix|lofi|anthem|theme|music|video)/i.test(q)) {
+            q = `${q} best hit songs`;
+        }
     }
     const videoId = await searchYouTubeVideoId(q);
     const actionDesc = `Playing "${q}" inside Senorita In-App Player`;
@@ -318,6 +347,29 @@ async function executePlayMusic(query, platform = 'youtube', userName = 'Boss') 
             videoId: videoId || 'jfKfPfyJRdk',
             title: q,
             autoPlay: true
+        }
+    };
+}
+
+function executeSendEmail(to = '', subject = '', body = '', userName = 'Boss') {
+    const cleanTo = (to || '').trim();
+    const cleanSubject = (subject || 'Message from Senorita AI').trim();
+    const cleanBody = (body || '').trim();
+
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cleanTo)}&su=${encodeURIComponent(cleanSubject)}&body=${encodeURIComponent(cleanBody)}`;
+    const mailtoUrl = `mailto:${cleanTo}?subject=${encodeURIComponent(cleanSubject)}&body=${encodeURIComponent(cleanBody)}`;
+
+    return {
+        reply: `Yes Boss! Maine aapke liye email write kar diya hai:\n\n**To:** ${cleanTo || 'Recipient'}\n**Subject:** ${cleanSubject}\n\nGmail direct pre-filled compose window me launch kar rahi hoon!`,
+        action: `Drafted Email: "${cleanSubject}"`,
+        actionData: {
+            type: 'SEND_EMAIL',
+            url: gmailUrl,
+            mailto: mailtoUrl,
+            to: cleanTo,
+            subject: cleanSubject,
+            body: cleanBody,
+            appName: 'Gmail'
         }
     };
 }
@@ -589,6 +641,7 @@ Persona & Tone:
 - Speak crisp contemporary Hinglish, Hindi, or English matching the user.
 - If asked to open any app or website (WhatsApp, Chrome, YouTube, Instagram, etc.), ALWAYS invoke openApplication or openWebsite.
 - If asked to play music or songs, ALWAYS invoke playMusic.
+- If asked to write, draft, or send an email (e.g. "email likho", "email bhej do", "mail send karo"): ALWAYS invoke sendEmail with recipient, professional subject, and complete body.
 - Provide direct, concise, high-value answers and code solutions.`,
                         tools: [{
                             functionDeclarations: [
@@ -597,7 +650,8 @@ Persona & Tone:
                                 systemControlDeclaration,
                                 hardwareControlDeclaration,
                                 playMusicDeclaration,
-                                manageMemoryDeclaration
+                                manageMemoryDeclaration,
+                                sendEmailDeclaration
                             ]
                         }]
                     }
@@ -628,6 +682,8 @@ Persona & Tone:
                 result = executeHardwareControl(call.args.action, cleanUserName);
             } else if (call.name === 'playMusic') {
                 result = await executePlayMusic(call.args.query, call.args.platform, cleanUserName);
+            } else if (call.name === 'sendEmail') {
+                result = executeSendEmail(call.args.to, call.args.subject, call.args.body, cleanUserName);
             } else if (call.name === 'manageMemory') {
                 result = executeMemory(call.args.fact);
             }
