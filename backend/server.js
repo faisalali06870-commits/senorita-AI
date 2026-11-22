@@ -639,9 +639,15 @@ Persona & Tone:
 - When responding to commands or greeting, say "Yes Boss!" or address them as "Boss".
 - Tag emotion at start: [emotion: confident] (or [emotion: cheerful], [emotion: thoughtful]).
 - Speak crisp contemporary Hinglish, Hindi, or English matching the user.
-- If asked to open any app or website (WhatsApp, Chrome, YouTube, Instagram, etc.), ALWAYS invoke openApplication or openWebsite.
-- If asked to play music or songs, ALWAYS invoke playMusic.
-- If asked to write, draft, or send an email (e.g. "email likho", "email bhej do", "mail send karo"): ALWAYS invoke sendEmail with recipient, professional subject, and complete body.
+
+CRITICAL FUNCTION CALLING RULES:
+- If the user asks for ANY song, music, video, or singer in ANY language or script (English, Hinglish, or Hindi Devnagari e.g. "सेनोरिता सनम बैंड का एक गाना चला दो", "Arijit Singh ka gana sunao", "गाना चलाओ", "play music"):
+  * YOU MUST ALWAYS INVOKE the playMusic tool with the singer/song name (e.g. "Sanam band", "Arijit Singh")!
+  * NEVER write a text-only reply claiming you are playing a song without invoking playMusic!
+- If the user asks to open any app or website in English or Hindi (e.g. "व्हाट्सएप खोलो", "whatsapp open karo", "calculator kholo"):
+  * YOU MUST ALWAYS INVOKE openApplication or openWebsite!
+- If the user asks to write, draft, or send an email in English or Hindi (e.g. "ईमेल भेजो", "email likho", "email bhej do"):
+  * YOU MUST ALWAYS INVOKE sendEmail with recipient, professional subject, and complete body.
 - Provide direct, concise, high-value answers and code solutions.`,
                         tools: [{
                             functionDeclarations: [
@@ -705,68 +711,84 @@ Persona & Tone:
             replyRaw = replyRaw.replace(emotionMatch[0], '').trim();
         }
 
-        // 100% Foolproof In-App Music & Video Intent Detector
+        // 100% Fail-Safe In-App Music & Video Intent Detector (English + Devnagari + Reply Analysis)
         let autoMedia = null;
         const promptLower = (prompt || '').toLowerCase();
-        const isDirectMusic = /(?:play|chalao|chala do|bajao|sunao|lagao|laga do|song|gana|gaana|music|video|lofi|track|geet|dhun)/i.test(promptLower);
+        const isDirectMusic = /(?:play|chalao|chala\s*do|chala\s*dena|bajao|baja\s*do|sunao|suna\s*do|lagao|laga\s*do|song|gana|gaana|music|video|lofi|track|geet|dhun|गाना|गाने|गीत|संगीत|धुन|चलाओ|चला\s*दो|बजाओ|बजा\s*दो|सुनाओ|सुना\s*दो|लगाओ|लगा\s*दो|सॉन्ग|म्यूजिक|विडियो|वीडियो|प्ले)/i.test(promptLower);
+        const isMusicReply = /(?:play\s*kar\s*rahi|laga\s*deti\s*hoon|gana\s*play|gaana\s*laga|playing|baja\s*rahi|suna\s*rahi|गाना)/i.test(replyRaw.toLowerCase());
         
         // Also detect affirmative responses (e.g. "ha chala do", "chalao", "yes") if previous context offered music
         let isContextMusic = false;
         let queryContext = prompt || '';
-        if (history && history.length > 0 && /(?:ha|haan|yes|yep|sure|theek hai|kardo|kar do|chalao|chala do)/i.test(promptLower)) {
+        if (history && history.length > 0 && /(?:ha|haan|yes|yep|sure|theek hai|kardo|kar do|chalao|chala do|हाँ|हां|चलाओ|बजाओ)/i.test(promptLower)) {
             const lastMsg = history[history.length - 1];
             const lastText = (lastMsg?.parts?.[0]?.text || lastMsg?.content || '').toLowerCase();
-            if (lastText.includes('song') || lastText.includes('gana') || lastText.includes('movie') || lastText.includes('chala doon') || lastText.includes('youtube')) {
+            if (lastText.includes('song') || lastText.includes('gana') || lastText.includes('गाना') || lastText.includes('movie') || lastText.includes('chala doon') || lastText.includes('youtube')) {
                 isContextMusic = true;
                 queryContext = lastText;
             }
         }
 
-        if (isDirectMusic || isContextMusic) {
+        if ((isDirectMusic || isContextMusic || isMusicReply) && !autoMedia) {
             let cleaned = queryContext
-                .replace(/(?:senorita|please|kripya|ek|koi|acha|mujhe|mere liye|play|karo|chalao|chala do|bajao|sunao|lagao|laga do|sunna hai|gana|gaana|song|video|music|track|kya aap|sunna chahenge|main abhi|chala doon|waise)/gi, ' ')
+                .replace(/(?:senorita|please|kripya|ek|koi|acha|accha|mujhe|mere\s*liye|play|karo|chalao|chala\s*do|bajao|baja\s*do|sunao|suna\s*do|lagao|laga\s*do|sunna\s*hai|gana|gaana|song|video|music|track|kya\s*aap|sunna\s*chahenge|main\s*abhi|chala\s*doon|waise|सेनोरिता|कृपया|प्लीज|एक|कोई|अच्छा|अच्छी|मुझे|मेरे\s*लिए|प्ले\s*करो|चलाओ|चला\s*दो|बजाओ|बजा\s*दो|सुनाओ|सुना\s*दो|लगाओ|लगा\s*दो|सुनना\s*है|गाना|गाने|गीत|संगीत|सॉन्ग|वीडियो|विडियो|म्यूजिक)/gi, ' ')
+                .replace(/(?:\s|^)(?:का|की|के|को|me|mein|par)(?:\s|$)/gi, ' ')
                 .trim()
                 .replace(/\s+/g, ' ');
 
             if (!cleaned || cleaned.length < 2) {
-                cleaned = 'popular trending lofi chill beats';
+                // If cleaned is empty, extract singer/band name from reply if available
+                const bandMatch = replyRaw.match(/(?:Yes Boss!\s*)([\w\s\u0900-\u097F]+?)(?:\s*(?:ka|ke|ki|band|gana|song|play))/i);
+                if (bandMatch && bandMatch[1] && bandMatch[1].length > 2) {
+                    cleaned = bandMatch[1].trim();
+                } else {
+                    cleaned = 'trending popular hit songs';
+                }
             }
 
-            const vid = await searchYouTubeVideoId(cleaned);
+            let searchTarget = cleaned;
+            if (!/(?:song|gana|track|hits|best)/i.test(searchTarget)) {
+                searchTarget = `${searchTarget} best hit songs`;
+            }
+
+            const vid = await searchYouTubeVideoId(searchTarget);
             autoMedia = {
                 type: 'youtube',
                 videoId: vid || 'jfKfPfyJRdk',
                 title: cleaned,
                 autoPlay: true
             };
+
+            // Ensure reply explicitly confirms playback with song/singer name
+            replyRaw = `Yes Boss! ${cleaned} Senorita In-App Player me play kar rahi hoon. Enjoy! 🎵`;
         }
 
-        // 100% Foolproof App / Website Open Intent Detector
+        // 100% Fail-Safe App / Website Open Intent Detector (English + Devnagari)
         let autoActionData = null;
         const appKeywords = [
-            { regex: /(?:whatsapp|whats\s*app|whats)/i, key: 'whatsapp' },
-            { regex: /(?:instagram|insta)/i, key: 'instagram' },
-            { regex: /(?:youtube)/i, key: 'youtube' },
-            { regex: /(?:facebook|fb)/i, key: 'facebook' },
-            { regex: /(?:telegram)/i, key: 'telegram' },
-            { regex: /(?:spotify)/i, key: 'spotify' },
-            { regex: /(?:calculator|calc|hisaab)/i, key: 'calculator' },
-            { regex: /(?:notepad|notes)/i, key: 'notepad' },
-            { regex: /(?:chrome|google)/i, key: 'chrome' },
-            { regex: /(?:github)/i, key: 'github' },
-            { regex: /(?:chatgpt|gpt)/i, key: 'chatgpt' },
-            { regex: /(?:gmail|email|mail)/i, key: 'gmail' },
-            { regex: /(?:maps|map)/i, key: 'maps' },
-            { regex: /(?:vscode|vs\s*code|code)/i, key: 'vscode' }
+            { regex: /(?:whatsapp|whats\s*app|whats|व्हाट्सएप|वाट्सएप|व्हाट्स\s*एप)/i, key: 'whatsapp' },
+            { regex: /(?:instagram|insta|इंस्टाग्राम|इन्स्टाग्राम|इंस्टा)/i, key: 'instagram' },
+            { regex: /(?:youtube|यूट्यूब)/i, key: 'youtube' },
+            { regex: /(?:facebook|fb|फेसबुक)/i, key: 'facebook' },
+            { regex: /(?:telegram|टेलीग्राम)/i, key: 'telegram' },
+            { regex: /(?:spotify|स्पॉटिफाई)/i, key: 'spotify' },
+            { regex: /(?:calculator|calc|hisaab|कैलकुलेटर|हिसाब)/i, key: 'calculator' },
+            { regex: /(?:notepad|notes|नोटपैड)/i, key: 'notepad' },
+            { regex: /(?:chrome|google|क्रोम|गूगल)/i, key: 'chrome' },
+            { regex: /(?:github|गिटहब)/i, key: 'github' },
+            { regex: /(?:chatgpt|gpt|चैटजीपीटी)/i, key: 'chatgpt' },
+            { regex: /(?:gmail|email|mail|जीमेल|ईमेल|इमेल|मेल)/i, key: 'gmail' },
+            { regex: /(?:maps|map|मैप|गूगल\s*मैप)/i, key: 'maps' },
+            { regex: /(?:vscode|vs\s*code|code|वीएस\s*कोड)/i, key: 'vscode' }
         ];
 
-        const isOpenCommand = /(?:kholo|khol\s*do|open|launch|start|chalao|chala\s*do|chalu\s*karo)/i.test(promptLower);
+        const isOpenCommand = /(?:kholo|khol\s*do|open|launch|start|chalao|chala\s*do|chalu\s*karo|खोलो|खोल\s*दो|खोलिए|ओपन|चालू\s*करो|स्टार्ट\s*करो)/i.test(promptLower);
         if (isOpenCommand && !isDirectMusic) {
             for (const item of appKeywords) {
                 if (item.regex.test(promptLower)) {
                     const executed = executeWindowsApp(item.key, cleanUserName);
                     autoActionData = executed.actionData;
-                    if (!replyRaw || replyRaw.length < 15 || /(?:khol|open|launch)/i.test(replyRaw)) {
+                    if (!replyRaw || replyRaw.length < 15 || /(?:khol|open|launch|खोलो)/i.test(replyRaw)) {
                         replyRaw = `Yes Boss! ${autoActionData.appName} open kar rahi hoon.`;
                     }
                     break;
