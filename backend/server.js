@@ -10,10 +10,13 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { EdgeTTS } from 'node-edge-tts';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load .env reliably from backend directory or project root
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config();
+
 const distPath = path.join(__dirname, '../frontend/dist');
 
 const app = express();
