@@ -816,6 +816,34 @@ CRITICAL FUNCTION CALLING RULES:
 // Serve frontend static build
 app.use(express.static(distPath));
 
+// Helper to get local Wi-Fi IP address for Tablet / Mobile connectivity
+function getLocalNetworkIp() {
+    try {
+        const interfaces = os.networkInterfaces();
+        for (const name of Object.keys(interfaces)) {
+            for (const iface of interfaces[name]) {
+                if (iface.family === 'IPv4' && !iface.internal) {
+                    return iface.address;
+                }
+            }
+        }
+    } catch (e) { }
+    return '127.0.0.1';
+}
+
+// Endpoint: System & Multi-Device Pairing Info
+app.get('/api/system-info', (req, res) => {
+    const localIp = getLocalNetworkIp();
+    res.json({
+        localIp: localIp,
+        port: PORT,
+        hostname: os.hostname(),
+        platform: os.platform(),
+        tabletUrl: `http://${localIp}:${PORT}`,
+        isWindows: process.platform === 'win32'
+    });
+});
+
 app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) return next();
     res.sendFile(path.join(distPath, 'index.html'));
@@ -823,6 +851,11 @@ app.get('*', (req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
-    console.log(`\n🚀 SENORITA-AI running on http://localhost:${PORT}`);
-    console.log(`📡 Health Check: http://localhost:${PORT}/api/health\n`);
+    const localIp = getLocalNetworkIp();
+    console.log(`\n======================================================`);
+    console.log(`🚀 SENORITA-AI DESKTOP ENGINE ACTIVE`);
+    console.log(`💻 Local Laptop:  http://localhost:${PORT}`);
+    console.log(`📱 Tablet/Phone:  http://${localIp}:${PORT}`);
+    console.log(`📡 Health Check:  http://localhost:${PORT}/api/health`);
+    console.log(`======================================================\n`);
 });

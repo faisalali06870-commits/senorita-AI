@@ -27,6 +27,38 @@ function cleanTextForSpeech(text) {
   return clean.trim();
 }
 
+// Sci-Fi JARVIS Synthesizer Audio Chimes (Web Audio API - Zero External Dependencies)
+function playJarvisChime(type = 'wake') {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === 'wake') {
+      // Futuristic 2-tone rising chime (Iron Man HUD style)
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.25);
+    } else {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(520, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.2);
+    }
+  } catch (e) { }
+}
+
 export default function App() {
   const [sessions, setSessions] = useState(() => {
     const saved = localStorage.getItem('senorita_sessions');
@@ -101,8 +133,8 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [serverStatus, setServerStatus] = useState('online');
 
-  // Hands-Free Senorita Mode & Studio Neural Voice States
-  const [senoritaMode, setSenoritaMode] = useState(() => localStorage.getItem('senorita_mode') === 'true');
+  // Hands-Free Senorita Mode & Studio Neural Voice States (Always-On by default like Siri/JARVIS)
+  const [senoritaMode, setSenoritaMode] = useState(() => localStorage.getItem('senorita_mode') !== 'false');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [selectedVoiceId, setSelectedVoiceId] = useState(() => localStorage.getItem('senorita_neural_voice') || 'hi-IN-SwaraNeural');
   const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('senorita_speech_rate')) || 1.05);
@@ -261,6 +293,22 @@ export default function App() {
 
       if (!combined) return;
 
+      // Smart Wake Word Detection ("Senorita", "Hey Senorita", "सेनोरिता")
+      const lowerClean = combined.toLowerCase().replace(/[.,!?;:]/g, '').trim();
+      const standaloneWakes = ['senorita', 'hey senorita', 'hello senorita', 'ok senorita', 'सेनोरिता', 'हे सेनोरिता', 'सुनो सेनोरिता'];
+
+      // If user calls her name ("Senorita") like Siri / JARVIS:
+      if (standaloneWakes.includes(lowerClean)) {
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        playJarvisChime('wake');
+        speechAccumulatorRef.current = '';
+        latestTranscriptRef.current = '';
+        setInterimTranscript('');
+        setInput('');
+        speak("Yes Boss! Boliye, kya hukum hai? Main sun rahi hoon.");
+        return;
+      }
+
       // Stream words live to transcript indicator & chat input box
       setInterimTranscript(combined);
       setInput(combined);
@@ -389,7 +437,13 @@ export default function App() {
     }
     setIsListening(false);
 
-    handleSendMessage(textToSend);
+    // Strip wake word prefix if present so command is pure and direct
+    let cleaned = (textToSend || '').trim();
+    cleaned = cleaned.replace(/^(?:hey\s+|hello\s+|ok\s+)?senorita[,:\s]+/i, '');
+    cleaned = cleaned.replace(/^(?:हे\s+|सुनो\s+)?सेनोरिता[,:\s]+/i, '');
+    if (!cleaned || cleaned.length < 2) cleaned = textToSend;
+
+    handleSendMessage(cleaned);
   };
 
   const toggleListening = () => {
