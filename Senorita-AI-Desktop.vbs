@@ -3,12 +3,7 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 
 ' Get current directory where this script lives
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
-
-' Check node binary path
-nodeExe = "node"
-If fso.FileExists("C:\Program Files\nodejs\node.exe") Then
-    nodeExe = """C:\Program Files\nodejs\node.exe"""
-End If
+WshShell.CurrentDirectory = scriptDir
 
 ' Check if node server is already running on port 3000
 On Error Resume Next
@@ -17,9 +12,9 @@ http.Open "GET", "http://localhost:3000/api/health", False
 http.Send
 
 If http.Status <> 200 Then
-    ' Start Node backend server completely hidden in the background (0 = hidden)
-    WshShell.CurrentDirectory = scriptDir
-    WshShell.Run "cmd /c " & nodeExe & " backend/server.js", 0, False
+    ' Start auto-restarting resilient Node runner completely hidden in background (0 = hidden)
+    runnerBat = """" & scriptDir & "\Senorita-Runner.bat"""
+    WshShell.Run runnerBat, 0, False
     
     ' Wait until backend server is genuinely up and responding with HTTP 200 (up to 15 seconds)
     For i = 1 To 15
