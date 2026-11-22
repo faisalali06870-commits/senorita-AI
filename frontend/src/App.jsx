@@ -387,14 +387,17 @@ export default function App() {
     };
 
     recognition.onerror = (e) => {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        console.warn('Microphone permission blocked.');
-        senoritaModeRef.current = false;
-        setSenoritaMode(false);
-      }
+      console.warn('SpeechRecognition error:', e.error);
       isRecognitionActiveRef.current = false;
-      if (!senoritaModeRef.current) {
-        setIsListening(false);
+
+      // In Senorita Mode: auto-recover from transient network, silence, or service errors!
+      if (senoritaModeRef.current && (e.error === 'network' || e.error === 'service-not-allowed' || e.error === 'no-speech')) {
+        if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = setTimeout(() => {
+          if (senoritaModeRef.current && !isBusyRef.current && !isSpeakingRef.current && !isRecognitionActiveRef.current) {
+            startListening();
+          }
+        }, 1200);
       }
     };
 
@@ -518,7 +521,7 @@ export default function App() {
     }
   };
 
-  // High-Fidelity Studio Neural Voice Player with Echo-Cancelling Cooldown
+  // High-Fidelity Studio Neural Voice Player with Echo-Cancelling Cooldown & Failsafe Watchdog
   const speak = (text, overrideVoiceId) => {
     // Clear any active audio or synthesizers
     if (audioRef.current) {
@@ -549,6 +552,48 @@ export default function App() {
     setIsSpeaking(true);
     isSpeakingRef.current = true;
 
+    let speechWatchdog = null;
+    let fallbackTriggered = false;
+
+    const handleSpeechDone = () => {
+      if (speechWatchdog) clearTimeout(speechWatchdog);
+      setIsSpeaking(false);
+      isSpeakingRef.current = false;
+      // 600ms acoustic cooldown so laptop speaker decay doesn't get heard by microphone
+      if (cooldownTimeoutRef.current) clearTimeout(cooldownTimeoutRef.current);
+      cooldownTimeoutRef.current = setTimeout(() => {
+        isBusyRef.current = false;
+        if (senoritaModeRef.current && !isSpeakingRef.current) {
+          startListening();
+        }
+      }, 600);
+    };
+
+    const triggerLocalFallback = () => {
+      if (fallbackTriggered) return;
+      fallbackTriggered = true;
+      if (audioRef.current) {
+        try { audioRef.current.pause(); } catch (e) { }
+        audioRef.current = null;
+      }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(spokenText);
+        utterance.rate = speechRate || 1.05;
+        utterance.onend = handleSpeechDone;
+        utterance.onerror = handleSpeechDone;
+        window.speechSynthesis.speak(utterance);
+      } else {
+        handleSpeechDone();
+      }
+    };
+
+    // Watchdog: under no circumstances can isBusyRef get stuck!
+    speechWatchdog = setTimeout(() => {
+      console.warn("Speech watchdog timeout triggered. Releasing audio lock.");
+      handleSpeechDone();
+    }, Math.max(6000, spokenText.length * 85));
+
     try {
       const activeVoice = overrideVoiceId || selectedVoiceId;
       const rateParam = (speechRate >= 1 ? '+' : '') + Math.round((speechRate - 1) * 100) + '%';
@@ -557,44 +602,33 @@ export default function App() {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
 
-      const handleSpeechDone = () => {
-        setIsSpeaking(false);
-        isSpeakingRef.current = false;
-        // 750ms acoustic cooldown so laptop speaker decay doesn't get heard by microphone!
-        if (cooldownTimeoutRef.current) clearTimeout(cooldownTimeoutRef.current);
-        cooldownTimeoutRef.current = setTimeout(() => {
-          isBusyRef.current = false;
-          if (senoritaModeRef.current && !isSpeakingRef.current) {
-            startListening();
-          }
-        }, 750);
-      };
-
-      audio.onended = handleSpeechDone;
-      audio.onerror = () => {
-        console.warn('Neural TTS stream error, falling back to local speech.');
-        if (window.speechSynthesis) {
-          const utterance = new SpeechSynthesisUtterance(spokenText);
-          utterance.onend = handleSpeechDone;
-          utterance.onerror = handleSpeechDone;
-          window.speechSynthesis.speak(utterance);
-        } else {
-          handleSpeechDone();
+      // 2.5s network timeout: if online neural voice stalls, immediately use offline Windows voice!
+      const networkTimeout = setTimeout(() => {
+        if (audio.paused && !fallbackTriggered) {
+          console.warn("Online TTS delayed. Seamlessly switching to local voice.");
+          triggerLocalFallback();
         }
+      }, 2500);
+
+      audio.onplay = () => clearTimeout(networkTimeout);
+      audio.onended = () => {
+        clearTimeout(networkTimeout);
+        handleSpeechDone();
+      };
+      audio.onerror = () => {
+        clearTimeout(networkTimeout);
+        console.warn('Neural TTS stream error, falling back to local speech.');
+        triggerLocalFallback();
       };
 
       audio.play().catch((err) => {
-        console.warn('Audio play prevented or interrupted:', err);
-        handleSpeechDone();
+        clearTimeout(networkTimeout);
+        console.warn('Audio play error, falling back to local speech:', err);
+        triggerLocalFallback();
       });
     } catch (e) {
-      console.error('Audio playback error:', e);
-      setIsSpeaking(false);
-      isSpeakingRef.current = false;
-      isBusyRef.current = false;
-      if (senoritaModeRef.current) {
-        setTimeout(startListening, 300);
-      }
+      console.error('Audio playback exception:', e);
+      triggerLocalFallback();
     }
   };
 
@@ -723,6 +757,17 @@ export default function App() {
       window.removeEventListener('focus', handleFocus);
     };
   }, [speechEnabled]);
+
+  // Always-On JARVIS Auto-Healing Voice Heartbeat (Guarantees mic NEVER sleeps or dies)
+  useEffect(() => {
+    const heartbeat = setInterval(() => {
+      if (senoritaModeRef.current && !isBusyRef.current && !isSpeakingRef.current && !isRecognitionActiveRef.current) {
+        startListening();
+      }
+    }, 2000);
+
+    return () => clearInterval(heartbeat);
+  }, []);
 
   // Live Screen Capture & Stream Methods
   const captureScreenFrame = () => {
@@ -911,6 +956,8 @@ export default function App() {
         }
       }
 
+      const capturedImage = data?.capturedImage || null;
+
       const aiMessage = {
         id: 'msg_' + (Date.now() + 1),
         role: 'model',
@@ -918,6 +965,7 @@ export default function App() {
         toolAction: toolAction,
         actionData: actionData,
         media: media,
+        capturedImage: capturedImage,
         emotion: emotion,
         timestamp: Date.now()
       };

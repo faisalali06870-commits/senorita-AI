@@ -396,6 +396,29 @@ export default function ChatMessage({ message, onSpeak, theme = 'dark', currentU
             </div>
           )}
 
+          {/* JARVIS Live Desktop Screen Vision Card (Direct Windows Screen Capture) */}
+          {message.capturedImage && (
+            <div className={`my-3 p-3 rounded-2xl border ${
+              isDark ? 'bg-slate-900/90 border-purple-500/30' : 'bg-purple-50/80 border-purple-200'
+            } shadow-lg backdrop-blur-md`}>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-purple-400">
+                    JARVIS Desktop Screen Vision (Live Capture)
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400">Analyzed</span>
+              </div>
+              <div className="rounded-xl overflow-hidden border border-purple-500/20 max-h-72 w-full flex items-center justify-center bg-black/40">
+                <img src={message.capturedImage} alt="Live Windows Desktop Screen" className="w-full h-auto object-contain max-h-72" />
+              </div>
+            </div>
+          )}
+
           {/* Embedded In-App Media Player (Plays songs & videos directly inside AI) */}
           {message.media && message.media.type === 'youtube' && (
             <MediaPlayerCard media={message.media} theme={theme} />

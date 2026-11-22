@@ -9,6 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { EdgeTTS } from 'node-edge-tts';
+import { captureDesktopScreen } from './desktopVision.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -597,6 +598,30 @@ app.post('/api/command', async (req, res) => {
         if (prompt) {
             userParts.push({ text: prompt });
         }
+
+        // Auto JARVIS Desktop Screen Vision: If user asks about their screen, silently capture desktop!
+        let autoCapturedScreen = null;
+        const isScreenQuery = /(?:screen|desktop|display|window|app|chal\s*raha|kya\s*chal\s*raha|dekho|dekh\s*kar|dekh\s*ke|batao|bata\s*sakti|bata\s*do|analyse|analyze|solve|error|screenshot|स्क्रीन|डेस्कटॉप|डिस्प्ले|दिखाओ|दिख\s*रहा|क्या\s*चल\s*रहा|देखो|देखकर|बताओ|सॉल्व|एरर)/i.test(prompt || '');
+        if (!imageBase64 && isScreenQuery && process.platform === 'win32') {
+            try {
+                autoCapturedScreen = captureDesktopScreen();
+                if (autoCapturedScreen) {
+                    const cleanB64 = autoCapturedScreen.replace(/^data:image\/[a-z]+;base64,/, '');
+                    userParts.push({
+                        inlineData: {
+                            mimeType: 'image/jpeg',
+                            data: cleanB64
+                        }
+                    });
+                    userParts.push({
+                        text: `[SYSTEM: A live real-time desktop screenshot of Faisal's Windows screen was just captured at this exact moment and provided above. Analyze what active apps, windows, documents, tabs, or errors are visible on his screen and answer his request accurately in Hindi / Hinglish with confidence.]`
+                    });
+                }
+            } catch (e) {
+                console.error("Auto screen capture error:", e.message);
+            }
+        }
+
         if (imageBase64) {
             const cleanB64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
             userParts.push({
@@ -803,7 +828,8 @@ CRITICAL FUNCTION CALLING RULES:
             reply: replyRaw,
             emotion: emotion,
             media: autoMedia,
-            actionData: autoActionData
+            actionData: autoActionData,
+            capturedImage: autoCapturedScreen
         });
     } catch (error) {
         console.error('Server error:', error);
@@ -811,6 +837,19 @@ CRITICAL FUNCTION CALLING RULES:
             reply: `AI Server Error: ${error.message || 'Please check your GEMINI_API_KEY in backend/.env'}`
         });
     }
+});
+
+// Endpoint: Desktop Screen Capture (Instant Windows Screenshot)
+app.get('/api/desktop/capture', (req, res) => {
+    try {
+        const img = captureDesktopScreen();
+        if (img) {
+            return res.json({ success: true, image: img });
+        }
+    } catch (e) {
+        return res.status(500).json({ error: e.message });
+    }
+    res.status(404).json({ error: 'Desktop capture not supported or unavailable' });
 });
 
 // Serve frontend static build
